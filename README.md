@@ -2,7 +2,7 @@
 
 # ❄️ ARCTIC BLOWER
 
-### Snow Clearing Simulator
+### Snow Clearing Business Simulator
 
 **From leaf blower to logistics empire — one snowflake at a time.**
 
@@ -24,33 +24,46 @@
 
 This entire game was built by AI in a single conversation. No frameworks. No build tools. No dependencies. Just one HTML file, one idea, and a lot of virtual snow.
 
-The prompt was simple: *"leaf blower simulator but snow in the arctic circle with infra support... as you get better you get bigger places to clear with more tools until it turns into a management sim then a logistics sim."*
+The prompt: *"leaf blower simulator but snow in the arctic circle... as you get better you get bigger places to clear with more tools until it turns into a management sim then a logistics sim."*
 
-And here we are.
+Then it evolved: *"Snow should build up and you should pay to unlock the next stage. Think of taking your business through stages as you make money."*
+
+And here we are — a full snow-clearing business simulator.
 
 ## What Is This?
 
-You start on a tiny porch in the Arctic Circle with nothing but a leaf blower and a dream. Clear the snow, earn money, upgrade your gear. Before long you're commanding plow trucks on Main Street, managing district crews across Frostville, and running logistics for an entire arctic region.
+You start with a leaf blower on Mrs. Henderson's porch. Snow builds up constantly — you're fighting it, earning money with every cleared cell. Take that cash to Business HQ: upgrade your gear, or invest in bigger contracts.
 
-**7 stages. 4 game modes. 1 file.**
+**7 contracts. 4 game modes. Your business, your pace.**
 
-- 🌬️ **Direct Clearing** — Blow snow with satisfying particle physics
-- 🚛 **Plow Mode** — Drive trucks through road networks  
-- 🏙️ **City Management** — Assign crews, balance budgets, keep citizens happy
-- 🌐 **Regional Logistics** — Four cities, one budget, blizzards incoming
+- 🌬️ **Porch → Parking Lot** — Direct clearing with leaf blowers, power blowers, snow blowers
+- 🚛 **Main Street** — City contract. They gave you a plow truck. Keep the roads clear.
+- 🏙️ **Frostville** — You're the boss. Assign crews to six districts. Keep citizens happy.
+- 🌐 **Arctic Region** — Four cities under your command. The Arctic depends on you.
+
+## How It Works
+
+1. **Clear snow** — click & hold to blow. Earn $ per cell cleared.
+2. **Visit Business HQ** — buy upgrades (Wider Blast, More Power, De-Icer) or unlock new contracts
+3. **Take bigger jobs** — each contract pays more but snow falls harder
+4. **Build your empire** — from solo porch-clearer to regional director
+
+Snow never stops falling. You decide: upgrade first, or rush the next contract?
 
 ## Controls
 
-**Mouse/Touch** to blow snow. That's it. You'll figure out the rest.
+**Click & hold** to blow snow. **🛒 Business HQ** button to upgrade & buy contracts. **Escape** to close shop. That's it.
 
 ## What's Inside
 
-- Canvas 2D rendering with 60fps particle system (800+ particles)
+- Canvas 2D rendering with 60fps particle system (600+ particles)
 - Procedural aurora borealis with multi-wave interference
 - Web Audio API sound engine — blow effects, combos, ambient arctic wind
-- 7 progressive stages across 4 distinct game modes
+- Business progression system with 7 unlockable contracts
 - 6 upgradeable tools with compounding effects
-- Screen shake, combo multipliers, speed bonuses
+- 4 distinct game modes (direct, plow, management, logistics)
+- Floating money pop indicators and $/second rate tracking
+- Screen shake, combo multipliers, sparkle effects
 - Responsive design — plays on phone or desktop
 
 ## Run Locally

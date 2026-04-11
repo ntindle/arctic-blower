@@ -914,7 +914,7 @@ function closeShop(){
   game._shopCooldown=true;
   setTimeout(()=>{game._shopCooldown=false;},200);
 }
-document.getElementById('btnCloseShop').onclick=function(){console.log('CLOSE CLICKED');closeShop();};
+document.getElementById('btnCloseShop').onclick=closeShop;
 
 document.getElementById('btnStartContract').onclick=()=>{
   document.getElementById('stageComplete').style.display='none';
