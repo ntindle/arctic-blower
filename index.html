@@ -842,7 +842,7 @@ function showShop() {
   bottomClose.style.cssText='margin-top:16px;margin-bottom:20px;text-align:center';
   bottomClose.innerHTML='<button class="btn" style="padding:8px 30px" id="btnCloseShop2">← Back to Work</button>';
   container.appendChild(bottomClose);
-  document.getElementById('btnCloseShop2').onclick=closeShop;
+  document.getElementById('btnCloseShop2').addEventListener('click',function(e){e.stopPropagation();closeShop();});
 }
 
 // ═══ MAIN LOOP ═══
@@ -911,7 +911,7 @@ function closeShop(){
   document.getElementById('mgmtPanel').style.display=(s.mode==='manage'||s.mode==='logistics')?'block':'none';
   playSound('click',0.2);
 }
-document.getElementById('btnCloseShop').onclick=closeShop;
+document.getElementById('btnCloseShop').addEventListener('click',function(e){e.stopPropagation();closeShop();});
 
 document.getElementById('btnStartContract').onclick=()=>{
   document.getElementById('stageComplete').style.display='none';
