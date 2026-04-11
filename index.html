@@ -93,12 +93,12 @@ Take on bigger contracts. Build an empire.
 </div>
 
 <div id="shopScreen">
-<h2>🏢 Business HQ</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;width:90%;max-width:700px;margin-top:10px">
+<h2 style="margin:0">🏢 Business HQ</h2>
+<button class="btn" id="btnCloseShop" style="padding:8px 20px;font-size:13px">✕ Back to Work</button>
+</div>
 <div id="shopMoney" class="hud-item" style="justify-content:center;font-size:18px;margin-bottom:4px;pointer-events:none">💰 <span id="shopMoneyVal">$0</span></div>
 <div id="shopSections"></div>
-<div style="margin-top:14px">
-<button class="btn" id="btnCloseShop" style="padding:8px 30px">← Back to Work</button>
-</div>
 </div>
 
 <div id="stageComplete">
@@ -836,6 +836,13 @@ function showShop() {
   }
   upgSec.appendChild(upgGrid);
   container.appendChild(upgSec);
+
+  // Bottom close button
+  const bottomClose=document.createElement('div');
+  bottomClose.style.cssText='margin-top:16px;margin-bottom:20px;text-align:center';
+  bottomClose.innerHTML='<button class="btn" style="padding:8px 30px" id="btnCloseShop2">← Back to Work</button>';
+  container.appendChild(bottomClose);
+  document.getElementById('btnCloseShop2').onclick=closeShop;
 }
 
 // ═══ MAIN LOOP ═══
@@ -896,14 +903,15 @@ document.getElementById('btnShop').onclick=()=>{
   playSound('click',0.2);showShop();
 };
 
-document.getElementById('btnCloseShop').onclick=()=>{
+function closeShop(){
   document.getElementById('shopScreen').style.display='none';
   game.state='playing';
   document.getElementById('gameHUD').style.display='flex';
   const s=STAGES[game.stage];
   document.getElementById('mgmtPanel').style.display=(s.mode==='manage'||s.mode==='logistics')?'block':'none';
   playSound('click',0.2);
-};
+}
+document.getElementById('btnCloseShop').onclick=closeShop;
 
 document.getElementById('btnStartContract').onclick=()=>{
   document.getElementById('stageComplete').style.display='none';
@@ -912,6 +920,13 @@ document.getElementById('btnStartContract').onclick=()=>{
   initStage(newStage);
   playSound('click',0.3);
 };
+
+// ═══ KEYBOARD ═══
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(game.state==='shop')closeShop();
+  }
+});
 
 // ═══ START ═══
 requestAnimationFrame(gameLoop);
