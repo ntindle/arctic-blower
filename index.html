@@ -9,8 +9,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e0e8f0;user-select:none;-webkit-user-select:none;touch-action:none}
 canvas{display:block;width:100%;height:100%}
 #ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-#ui .btn,#ui .shop-item,#ui .district-btn,#ui .clickable{pointer-events:auto}
-#startScreen,#shopScreen,#stageComplete{pointer-events:auto}
+#ui .btn,#ui .district-btn{pointer-events:auto}
 .panel{background:rgba(10,14,26,0.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(100,180,255,0.15);border-radius:12px;padding:16px}
 .btn{background:linear-gradient(135deg,#1a3a5c,#0d2240);border:1px solid rgba(100,180,255,0.3);color:#c0daf0;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;transition:all 0.2s;font-family:inherit}
 .btn:hover{background:linear-gradient(135deg,#1e4a70,#153050);border-color:rgba(100,180,255,0.6);box-shadow:0 0 20px rgba(100,180,255,0.2);transform:translateY(-1px)}
@@ -59,7 +58,7 @@ canvas{display:block;width:100%;height:100%}
 </head>
 <body>
 <canvas id="game"></canvas>
-<div id="ui">
+
 <div id="startScreen" style="display:flex">
 <h1>❄️ ARCTIC BLOWER</h1>
 <div class="subtitle">Snow Clearing Business Simulator</div>
@@ -74,6 +73,22 @@ Take on bigger contracts. Build an empire.
 <div style="font-size:11px;color:#405060;margin-top:8px">Click & hold to blow snow • Earn 💰 • Grow your business</div>
 </div>
 
+<div id="shopScreen">
+<div style="display:flex;justify-content:space-between;align-items:center;width:90%;max-width:700px;margin-top:10px">
+<h2 style="margin:0">🏢 Business HQ</h2>
+<button class="btn" id="btnCloseShop" style="padding:8px 20px;font-size:13px">✕ Back to Work</button>
+</div>
+<div id="shopMoney" class="hud-item" style="justify-content:center;font-size:18px;margin-bottom:4px">💰 <span id="shopMoneyVal">$0</span></div>
+<div id="shopSections"></div>
+</div>
+
+<div id="stageComplete">
+<h2 id="scTitle">📋 New Contract Accepted!</h2>
+<p id="scDesc" style="font-size:14px;color:#80a0c0;text-align:center;max-width:400px"></p>
+<button class="btn btn-primary" id="btnStartContract" style="margin-top:8px">Let's Go! ➜</button>
+</div>
+
+<div id="ui">
 <div id="gameHUD">
 <div class="hud-left">
 <div class="hud-item">📍 <span id="hudStage">Front Porch</span></div>
@@ -90,21 +105,6 @@ Take on bigger contracts. Build an empire.
 <div class="hud-item">📈 <span id="hudRate">$0/s</span></div>
 <div class="hud-item" id="hudSatItem" style="display:none">😊 <span id="hudSat">100%</span></div>
 </div>
-</div>
-
-<div id="shopScreen">
-<div style="display:flex;justify-content:space-between;align-items:center;width:90%;max-width:700px;margin-top:10px">
-<h2 style="margin:0">🏢 Business HQ</h2>
-<button class="btn" id="btnCloseShop" style="padding:8px 20px;font-size:13px">✕ Back to Work</button>
-</div>
-<div id="shopMoney" class="hud-item" style="justify-content:center;font-size:18px;margin-bottom:4px;pointer-events:none">💰 <span id="shopMoneyVal">$0</span></div>
-<div id="shopSections"></div>
-</div>
-
-<div id="stageComplete">
-<h2 id="scTitle">📋 New Contract Accepted!</h2>
-<p id="scDesc" style="font-size:14px;color:#80a0c0;text-align:center;max-width:400px"></p>
-<button class="btn btn-primary" id="btnStartContract" style="margin-top:8px">Let's Go! ➜</button>
 </div>
 
 <div id="tooltip"></div>
@@ -842,7 +842,7 @@ function showShop() {
   bottomClose.style.cssText='margin-top:16px;margin-bottom:20px;text-align:center';
   bottomClose.innerHTML='<button class="btn" style="padding:8px 30px" id="btnCloseShop2">← Back to Work</button>';
   container.appendChild(bottomClose);
-  document.getElementById('btnCloseShop2').addEventListener('click',function(e){e.stopPropagation();closeShop();});
+  document.getElementById('btnCloseShop2').onclick=closeShop;
 }
 
 // ═══ MAIN LOOP ═══
@@ -911,7 +911,7 @@ function closeShop(){
   document.getElementById('mgmtPanel').style.display=(s.mode==='manage'||s.mode==='logistics')?'block':'none';
   playSound('click',0.2);
 }
-document.getElementById('btnCloseShop').addEventListener('click',function(e){e.stopPropagation();closeShop();});
+document.getElementById('btnCloseShop').onclick=closeShop;
 
 document.getElementById('btnStartContract').onclick=()=>{
   document.getElementById('stageComplete').style.display='none';
