@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Arctic Blower ❄️</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e0e8f0;user-select:none;-webkit-user-select:none;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#ui *{pointer-events:auto}
+.panel{background:rgba(10,14,26,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(100,180,255,0.15);border-radius:12px;padding:16px}
+.btn{background:linear-gradient(135deg,#1a3a5c,#0d2240);border:1px solid rgba(100,180,255,0.3);color:#c0daf0;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.btn:hover{background:linear-gradient(135deg,#1e4a70,#153050);border-color:rgba(100,180,255,0.6);box-shadow:0 0 20px rgba(100,180,255,0.2);transform:translateY(-1px)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(135deg,#1a5a3c,#0d4028);border-color:rgba(100,255,180,0.3)}
+.btn-primary:hover{background:linear-gradient(135deg,#1e6a48,#155030);border-color:rgba(100,255,180,0.6);box-shadow:0 0 20px rgba(100,255,180,0.2)}
+#startScreen,#shopScreen,#stageComplete,#gameHUD{display:none;position:absolute}
+#startScreen{top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:100}
+#startScreen h1{font-size:clamp(32px,8vw,64px);font-weight:800;background:linear-gradient(135deg,#88ccff,#ffffff,#aaddff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;letter-spacing:-1px}
+#startScreen .subtitle{font-size:clamp(12px,3vw,18px);color:#6090b0;letter-spacing:2px;text-transform:uppercase}
+#gameHUD{top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;z-index:50}
+.hud-left,.hud-right{display:flex;flex-direction:column;gap:8px}
+.hud-item{font-size:12px;color:#80a0c0;display:flex;align-items:center;gap:6px}
+.hud-item span{color:#c0daf0;font-weight:600}
+#progressBar{width:clamp(120px,30vw,200px);height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
+#progressFill{height:100%;background:linear-gradient(90deg,#4488cc,#66ddaa);border-radius:3px;transition:width 0.3s;width:0}
+#shopScreen{top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:90;background:rgba(5,8,15,0.9)}
+#shopScreen h2{font-size:24px;color:#88ccff}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;max-width:680px;width:90%}
+.shop-item{text-align:center;padding:16px;cursor:pointer;transition:all 0.2s}
+.shop-item:hover{border-color:rgba(100,180,255,0.5);background:rgba(20,30,50,0.8)}
+.shop-item.owned{border-color:rgba(100,255,150,0.3);opacity:0.6;cursor:default}
+.shop-item h3{font-size:14px;margin-bottom:4px;color:#aaddff}
+.shop-item p{font-size:11px;color:#607890;margin-bottom:8px}
+.shop-item .price{font-size:16px;font-weight:700;color:#66ddaa}
+#stageComplete{top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:80;background:rgba(5,8,15,0.85)}
+#stageComplete h2{font-size:28px;color:#66ddaa}
+.stat-row{display:flex;gap:24px;font-size:14px;color:#80a0c0}
+.stat-row span{color:#c0daf0;font-weight:600}
+#tooltip{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-size:13px;color:#6090b0;text-align:center;z-index:50;opacity:0;transition:opacity 0.5s}
+#mgmtPanel{position:absolute;bottom:12px;left:12px;right:12px;z-index:50;display:none}
+.mgmt-grid{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.district-btn{padding:8px 14px;font-size:11px;border-radius:6px;cursor:pointer;transition:all 0.2s}
+.district-btn:hover{transform:scale(1.05)}
+.district-btn.assigned{box-shadow:0 0 10px rgba(100,255,180,0.3)}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+<div id="startScreen">
+<h1>❄️ ARCTIC BLOWER</h1>
+<div class="subtitle">Snow Clearing Simulator</div>
+<div class="panel" style="text-align:center;max-width:360px">
+<p style="font-size:13px;color:#6090b0;line-height:1.6;margin-bottom:16px">
+Clear snow in the Arctic Circle. Start with a leaf blower, work your way up to managing entire regions.
+</p>
+<button class="btn btn-primary" id="btnStart" style="font-size:16px;padding:12px 40px">▶ START CLEARING</button>
+</div>
+<div style="font-size:11px;color:#405060;margin-top:8px">Mouse/Touch to blow snow • Earn 💰 • Upgrade tools</div>
+</div>
+<div id="gameHUD">
+<div class="hud-left">
+<div class="hud-item">📍 <span id="hudStage">Front Porch</span></div>
+<div class="hud-item">🔧 <span id="hudTool">Leaf Blower</span></div>
+<div class="hud-item" id="hudCrewItem" style="display:none">👷 Crews: <span id="hudCrews">0</span></div>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+<div id="progressBar"><div id="progressFill"></div></div>
+<div class="hud-item" style="font-size:11px"><span id="hudPercent">0%</span> cleared</div>
+</div>
+<div class="hud-right" style="align-items:flex-end">
+<div class="hud-item">💰 <span id="hudMoney">$0</span></div>
+<div class="hud-item">⏱ <span id="hudTime">0:00</span></div>
+<div class="hud-item" id="hudSatItem" style="display:none">😊 <span id="hudSat">100%</span></div>
+</div>
+</div>
+<div id="shopScreen">
+<h2>🛒 Upgrade Shop</h2>
+<div id="shopMoney" class="hud-item" style="justify-content:center;font-size:16px;margin-bottom:8px">💰 <span id="shopMoneyVal">$0</span></div>
+<div class="shop-grid" id="shopGrid"></div>
+<div style="margin-top:16px;display:flex;gap:12px">
+<button class="btn btn-primary" id="btnNextStage">Next Stage ➜</button>
+</div>
+</div>
+<div id="stageComplete">
+<h2>✅ Stage Complete!</h2>
+<div class="stat-row">
+<div>Time: <span id="statTime">0:00</span></div>
+<div>Earned: <span id="statEarned">$0</span></div>
+</div>
+<div id="statBonus" style="font-size:13px;color:#66ddaa;display:none"></div>
+<button class="btn btn-primary" id="btnToShop" style="margin-top:8px">Continue ➜</button>
+</div>
+<div id="tooltip"></div>
+<div id="mgmtPanel">
+<div class="panel" style="padding:10px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<span style="font-size:13px;font-weight:600" id="mgmtTitle">District Management</span>
+<span class="hud-item" style="font-size:12px">Budget: 💰<span id="mgmtBudget">$0</span>/day</span>
+</div>
+<div class="mgmt-grid" id="mgmtGrid"></div>
+</div>
+</div>
+</div>
+<script>
+// ═══════════════════════════════════════════
+// ARCTIC BLOWER - Complete Game Engine
+// ═══════════════════════════════════════════
+
+const C = document.getElementById('game');
+const ctx = C.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  C.width = W * dpr;
+  C.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ═══ SOUND ENGINE (Web Audio) ═══
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type, vol = 0.3) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const g = audioCtx.createGain();
+  g.connect(audioCtx.destination);
+  g.gain.setValueAtTime(vol, now);
+
+  if (type === 'blow') {
+    // White noise burst for blowing
+    const dur = 0.08;
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * dur, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.5;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = 800;
+    src.connect(filt);
+    filt.connect(g);
+    g.gain.exponentialRampToValueAtTime(0.01, now + dur);
+    src.start(now);
+  } else if (type === 'clear') {
+    const o = audioCtx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(600, now);
+    o.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+    o.connect(g);
+    g.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    o.start(now);
+    o.stop(now + 0.2);
+  } else if (type === 'upgrade') {
+    const o = audioCtx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(400, now);
+    o.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+    o.connect(g);
+    g.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    o.start(now);
+    o.stop(now + 0.3);
+    const o2 = audioCtx.createOscillator();
+    o2.type = 'triangle';
+    o2.frequency.setValueAtTime(600, now + 0.1);
+    o2.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+    const g2 = audioCtx.createGain();
+    g2.connect(audioCtx.destination);
+    g2.gain.setValueAtTime(vol * 0.6, now + 0.1);
+    g2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    o2.connect(g2);
+    o2.start(now + 0.1);
+    o2.stop(now + 0.4);
+  } else if (type === 'complete') {
+    [400,500,600,800].forEach((f, i) => {
+      const o = audioCtx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f;
+      const gi = audioCtx.createGain();
+      gi.connect(audioCtx.destination);
+      gi.gain.setValueAtTime(0, now + i * 0.12);
+      gi.gain.linearRampToValueAtTime(vol * 0.4, now + i * 0.12 + 0.02);
+      gi.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
+      o.connect(gi);
+      o.start(now + i * 0.12);
+      o.stop(now + i * 0.12 + 0.3);
+    });
+  } else if (type === 'click') {
+    const o = audioCtx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = 1000;
+    o.connect(g);
+    g.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    o.start(now);
+    o.stop(now + 0.05);
+  } else if (type === 'wind') {
+    const dur = 2;
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * dur, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = 300;
+    filt.Q.value = 0.5;
+    src.connect(filt);
+    filt.connect(g);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol * 0.15, now + 0.5);
+    g.gain.linearRampToValueAtTime(0, now + dur);
+    src.start(now);
+  }
+}
+
+// Wind ambient loop
+let windTimer = 0;
+function ambientWind(dt) {
+  windTimer -= dt;
+  if (windTimer <= 0) {
+    playSound('wind', 0.2);
+    windTimer = 3 + Math.random() * 4;
+  }
+}
+
+// ═══ PARTICLE SYSTEM ═══
+class Particle {
+  constructor(x, y, vx, vy, life, size, color, type = 'snow') {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.life = this.maxLife = life;
+    this.size = size; this.color = color; this.type = type;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 3;
+  }
+}
+
+const particles = [];
+const MAX_PARTICLES = 800;
+
+function emitSnowBlow(x, y, angle, count, force) {
+  for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+    const a = angle + (Math.random() - 0.5) * 1.2;
+    const spd = force * (0.5 + Math.random() * 0.8);
+    const sz = 2 + Math.random() * 4;
+    const c = `rgba(${200+Math.random()*55},${220+Math.random()*35},255,${0.6+Math.random()*0.4})`;
+    particles.push(new Particle(
+      x + (Math.random()-0.5)*10, y + (Math.random()-0.5)*10,
+      Math.cos(a)*spd, Math.sin(a)*spd - Math.random()*30,
+      0.5 + Math.random()*0.8, sz, c, 'snowblow'
+    ));
+  }
+}
+
+function emitSparkle(x, y, count) {
+  for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const spd = 20 + Math.random() * 60;
+    particles.push(new Particle(
+      x, y, Math.cos(a)*spd, Math.sin(a)*spd,
+      0.3 + Math.random()*0.5, 1+Math.random()*2,
+      `rgba(100,220,${180+Math.random()*75},${0.7+Math.random()*0.3})`, 'sparkle'
+    ));
+  }
+}
+
+function emitAmbientSnow() {
+  if (particles.length < MAX_PARTICLES && Math.random() < 0.3) {
+    particles.push(new Particle(
+      Math.random() * W, -5,
+      (Math.random()-0.5)*20, 15+Math.random()*25,
+      3+Math.random()*3, 1+Math.random()*3,
+      `rgba(200,220,255,${0.2+Math.random()*0.3})`, 'ambient'
+    ));
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length-1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 40 * dt; // gravity
+    p.vx *= 0.98;
+    p.rotation += p.rotSpeed * dt;
+    if (p.type === 'ambient') { p.vx += Math.sin(performance.now()/1000 + p.x*0.01)*5*dt; p.vy -= 10*dt; }
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = Math.min(1, p.life / p.maxLife * 2);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    if (p.type === 'sparkle') {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.size, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.size*2, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+    }
+    ctx.restore();
+  }
+}
+
+
+// ═══ AURORA BOREALIS BACKGROUND ═══
+const auroraWaves = Array.from({length:5}, (_,i) => ({
+  y: 0.15 + i*0.08,
+  speed: 0.2 + Math.random()*0.3,
+  amp: 0.02 + Math.random()*0.03,
+  phase: Math.random()*Math.PI*2,
+  hue: 140 + i*30,
+  width: 0.15 + Math.random()*0.1
+}));
+
+function drawAurora(t) {
+  for (const w of auroraWaves) {
+    const gradient = ctx.createLinearGradient(0, 0, W, 0);
+    const steps = 8;
+    for (let s = 0; s <= steps; s++) {
+      const frac = s / steps;
+      const intensity = Math.sin(frac * Math.PI) * 0.12;
+      const hueShift = Math.sin(t * w.speed + frac * 4 + w.phase) * 30;
+      gradient.addColorStop(frac, `hsla(${w.hue + hueShift}, 80%, 60%, ${intensity})`);
+    }
+    ctx.fillStyle = gradient;
+    const baseY = w.y * H;
+    const waveH = w.width * H;
+    ctx.beginPath();
+    ctx.moveTo(0, baseY);
+    for (let x = 0; x <= W; x += 4) {
+      const wave = Math.sin(x*0.003 + t*w.speed + w.phase) * w.amp * H;
+      const wave2 = Math.sin(x*0.007 + t*w.speed*1.3) * w.amp * H * 0.5;
+      ctx.lineTo(x, baseY + wave + wave2);
+    }
+    ctx.lineTo(W, baseY + waveH);
+    ctx.lineTo(0, baseY + waveH);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawStars(t) {
+  const starSeed = 42;
+  let s = starSeed;
+  const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let i = 0; i < 80; i++) {
+    const x = rand() * W;
+    const y = rand() * H * 0.4;
+    const sz = 0.5 + rand() * 1.5;
+    const twinkle = 0.3 + Math.sin(t * (1+rand()*2) + rand()*10) * 0.3 + 0.4;
+    ctx.fillStyle = `rgba(200,220,255,${twinkle})`;
+    ctx.beginPath();
+    ctx.arc(x, y, sz, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function drawBackground(t) {
+  // Dark sky gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+  skyGrad.addColorStop(0, '#050810');
+  skyGrad.addColorStop(0.4, '#0a1020');
+  skyGrad.addColorStop(0.7, '#101828');
+  skyGrad.addColorStop(1, '#1a2535');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+  drawStars(t);
+  drawAurora(t);
+}
+
+// ═══ STAGE DEFINITIONS ═══
+const STAGES = [
+  { name:'Front Porch', gridW:16, gridH:12, tool:'Leaf Blower', target:0.85, snowRate:0, reward:50, mode:'direct',
+    desc:'A cozy porch buried in snow. Time to warm up that leaf blower.' },
+  { name:'Sidewalk', gridW:24, gridH:14, tool:'Leaf Blower', target:0.85, snowRate:0.001, reward:100, mode:'direct',
+    desc:'The neighbors are watching. Make it spotless.' },
+  { name:'Driveway', gridW:32, gridH:20, tool:'Power Blower', target:0.80, snowRate:0.003, reward:200, mode:'direct',
+    desc:'Someone needs to get to work. Better hurry.' },
+  { name:'Parking Lot', gridW:42, gridH:28, tool:'Snow Blower', target:0.75, snowRate:0.005, reward:400, mode:'direct',
+    desc:'The mall opens in an hour. 60 spaces to clear.' },
+  { name:'Main Street', roadCount:12, tool:'Plow Truck', target:0.80, snowRate:0.01, reward:800, mode:'plow',
+    desc:'Strap into the plow. Keep the roads moving.' },
+  { name:'Frostville', districts:6, tool:'Fleet Manager', target:0.70, snowRate:0.015, reward:1500, mode:'manage',
+    desc:'You run the show now. Assign crews. Keep the city happy.' },
+  { name:'Arctic Region', cities:4, tool:'Regional Director', target:0.65, snowRate:0.008, reward:3000, mode:'logistics',
+    desc:'Four cities. One budget. Blizzards incoming. Good luck.' },
+];
+
+// ═══ UPGRADES ═══
+const UPGRADES = [
+  { id:'radius', name:'Wider Blast', desc:'Increase blow radius', baseCost:60, maxLvl:5, icon:'💨',
+    effect: lvl => 1 + lvl * 0.3 },
+  { id:'power', name:'More Power', desc:'Clear snow faster', baseCost:80, maxLvl:5, icon:'⚡',
+    effect: lvl => 1 + lvl * 0.35 },
+  { id:'speed', name:'Move Speed', desc:'Move faster between areas', baseCost:50, maxLvl:4, icon:'🏃',
+    effect: lvl => 1 + lvl * 0.2 },
+  { id:'income', name:'Tip Jar', desc:'Earn more per area cleared', baseCost:100, maxLvl:4, icon:'💰',
+    effect: lvl => 1 + lvl * 0.3 },
+  { id:'crews', name:'Hire Crew', desc:'Extra crew for management stages', baseCost:300, maxLvl:3, icon:'👷',
+    effect: lvl => lvl },
+  { id:'forecast', name:'Weather Intel', desc:'Predict snowfall 30s ahead', baseCost:200, maxLvl:2, icon:'📡',
+    effect: lvl => lvl > 0 },
+];
+
+// ═══ GAME STATE ═══
+const game = {
+  state: 'menu', // menu, playing, stageComplete, shop
+  stage: 0,
+  money: 0,
+  upgrades: {},  // id -> level
+  // Stage-specific
+  snow: null,    // 2D array for direct mode
+  snowGridW: 0,
+  snowGridH: 0,
+  cellSize: 0,
+  offsetX: 0,
+  offsetY: 0,
+  cleared: 0,
+  totalCells: 0,
+  stageTime: 0,
+  stageEarned: 0,
+  // Player
+  playerX: 0,
+  playerY: 0,
+  blowing: false,
+  blowAngle: 0,
+  // Plow mode
+  roads: [],
+  plowX: 0,
+  plowY: 0,
+  plowTarget: null,
+  plowSpeed: 120,
+  // Management mode
+  districts: [],
+  mgmtBudget: 0,
+  satisfaction: 100,
+  // Logistics mode
+  cities: [],
+  supplies: 0,
+  // Visual
+  screenShake: 0,
+  tooltip: '',
+  tooltipTimer: 0,
+  // Mouse
+  mouseX: W/2,
+  mouseY: H/2,
+  mouseDown: false,
+  // Combo
+  comboTimer: 0,
+  comboCount: 0,
+};
+
+function getUpgradeLevel(id) { return game.upgrades[id] || 0; }
+function getUpgradeEffect(id) { return UPGRADES.find(u=>u.id===id).effect(getUpgradeLevel(id)); }
+function getUpgradeCost(id) { const u = UPGRADES.find(u2=>u2.id===id); return Math.floor(u.baseCost * Math.pow(1.8, getUpgradeLevel(id))); }
+
+// ═══ INPUT ═══
+function getPos(e) {
+  if (e.touches) { return { x: e.touches[0].clientX, y: e.touches[0].clientY }; }
+  return { x: e.clientX, y: e.clientY };
+}
+
+C.addEventListener('mousedown', e => { initAudio(); game.mouseDown = true; const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; });
+C.addEventListener('mouseup', () => { game.mouseDown = false; });
+C.addEventListener('mousemove', e => { const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; });
+C.addEventListener('touchstart', e => { e.preventDefault(); initAudio(); game.mouseDown = true; const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; }, {passive:false});
+C.addEventListener('touchend', e => { e.preventDefault(); game.mouseDown = false; }, {passive:false});
+C.addEventListener('touchmove', e => { e.preventDefault(); const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; }, {passive:false});
+
+// ═══ STAGE INITIALIZATION ═══
+function initStage(idx) {
+  const s = STAGES[idx];
+  game.stage = idx;
+  game.stageTime = 0;
+  game.stageEarned = 0;
+  game.cleared = 0;
+  game.screenShake = 0;
+  game.comboCount = 0;
+  game.comboTimer = 0;
+  particles.length = 0;
+
+  if (s.mode === 'direct') {
+    const gw = s.gridW, gh = s.gridH;
+    game.snowGridW = gw;
+    game.snowGridH = gh;
+    // Calculate cell size to fit the play area (with padding)
+    const padX = 40, padY = 80;
+    game.cellSize = Math.min((W - padX*2)/gw, (H - padY*2)/gh);
+    game.offsetX = (W - gw * game.cellSize) / 2;
+    game.offsetY = (H - gh * game.cellSize) / 2 + 20;
+    game.snow = [];
+    for (let y = 0; y < gh; y++) {
+      game.snow[y] = [];
+      for (let x = 0; x < gw; x++) {
+        game.snow[y][x] = 0.7 + Math.random() * 0.3;
+      }
+    }
+    game.totalCells = gw * gh;
+    game.playerX = W / 2;
+    game.playerY = H / 2;
+  } else if (s.mode === 'plow') {
+    initPlowStage(s);
+  } else if (s.mode === 'manage') {
+    initManageStage(s);
+  } else if (s.mode === 'logistics') {
+    initLogisticsStage(s);
+  }
+
+  // Show HUD
+  document.getElementById('gameHUD').style.display = 'flex';
+  document.getElementById('hudStage').textContent = s.name;
+  document.getElementById('hudTool').textContent = s.tool;
+  document.getElementById('hudCrewItem').style.display = (s.mode==='manage'||s.mode==='logistics') ? 'flex' : 'none';
+  document.getElementById('hudSatItem').style.display = (s.mode==='manage'||s.mode==='logistics') ? 'flex' : 'none';
+  document.getElementById('mgmtPanel').style.display = (s.mode==='manage'||s.mode==='logistics') ? 'block' : 'none';
+
+  showTooltip(s.desc, 4);
+}
+
+
+// ═══ PLOW STAGE ═══
+function initPlowStage(s) {
+  game.roads = [];
+  const margin = 80;
+  const areaW = W - margin*2;
+  const areaH = H - margin*2 - 60;
+  // Create road network - horizontal and vertical roads
+  const hCount = Math.floor(s.roadCount * 0.5);
+  const vCount = s.roadCount - hCount;
+  for (let i = 0; i < hCount; i++) {
+    const y = margin + 60 + (i+1) * areaH / (hCount+1);
+    game.roads.push({x1:margin, y1:y, x2:margin+areaW, y2:y, snow:0.8+Math.random()*0.2, width:18});
+  }
+  for (let i = 0; i < vCount; i++) {
+    const x = margin + (i+1) * areaW / (vCount+1);
+    game.roads.push({x1:x, y1:margin+60, x2:x, y2:margin+60+areaH, snow:0.8+Math.random()*0.2, width:18});
+  }
+  game.totalCells = game.roads.length;
+  game.plowX = game.roads[0].x1;
+  game.plowY = game.roads[0].y1;
+  game.plowTarget = null;
+}
+
+function updatePlow(dt, s) {
+  // Snow accumulation
+  for (const r of game.roads) {
+    r.snow = Math.min(1, r.snow + s.snowRate * dt * (0.5 + Math.random()));
+  }
+
+  // Find closest road to click/tap
+  if (game.mouseDown) {
+    let bestDist = Infinity, bestRoad = null;
+    for (const r of game.roads) {
+      // Distance from mouse to road segment
+      const dx = r.x2-r.x1, dy = r.y2-r.y1;
+      const len = Math.sqrt(dx*dx+dy*dy);
+      const t = Math.max(0, Math.min(1, ((game.mouseX-r.x1)*dx+(game.mouseY-r.y1)*dy)/(len*len)));
+      const px = r.x1 + t*dx, py = r.y1 + t*dy;
+      const dist = Math.sqrt((game.mouseX-px)**2 + (game.mouseY-py)**2);
+      if (dist < bestDist && dist < 40) { bestDist = dist; bestRoad = r; }
+    }
+    if (bestRoad) {
+      game.plowTarget = bestRoad;
+      playSound('click', 0.15);
+    }
+  }
+
+  // Move plow toward target road
+  if (game.plowTarget) {
+    const r = game.plowTarget;
+    const midX = (r.x1+r.x2)/2, midY = (r.y1+r.y2)/2;
+    const dx = midX - game.plowX, dy = midY - game.plowY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const speed = game.plowSpeed * getUpgradeEffect('speed');
+    if (dist < speed * dt) {
+      // Arrived - clear the road
+      if (r.snow > 0.1) {
+        const cleared = r.snow;
+        r.snow = Math.max(0, r.snow - 0.4 * getUpgradeEffect('power'));
+        if (r.snow < 0.15) r.snow = 0;
+        const earned = Math.floor(cleared * 8 * getUpgradeEffect('income'));
+        game.money += earned;
+        game.stageEarned += earned;
+        emitSnowBlow(game.plowX, game.plowY, Math.atan2(dy,dx), 15, 80);
+        playSound('blow', 0.2);
+        game.screenShake = 3;
+      }
+      game.plowX = midX;
+      game.plowY = midY;
+      game.plowTarget = null;
+    } else {
+      game.plowX += (dx/dist) * speed * dt;
+      game.plowY += (dy/dist) * speed * dt;
+      // Clear snow along the way
+      for (const road of game.roads) {
+        const rdx = road.x2-road.x1, rdy = road.y2-road.y1;
+        const len = Math.sqrt(rdx*rdx+rdy*rdy);
+        const t = Math.max(0, Math.min(1, ((game.plowX-road.x1)*rdx+(game.plowY-road.y1)*rdy)/(len*len)));
+        const px = road.x1+t*rdx, py = road.y1+t*rdy;
+        const d = Math.sqrt((game.plowX-px)**2+(game.plowY-py)**2);
+        if (d < 25) {
+          const clearRate = 0.8 * getUpgradeEffect('power') * dt;
+          if (road.snow > 0) {
+            road.snow = Math.max(0, road.snow - clearRate);
+            if (Math.random() < 0.3) emitSnowBlow(game.plowX, game.plowY, Math.atan2(game.plowY-py,game.plowX-px), 3, 50);
+          }
+        }
+      }
+    }
+  }
+
+  // Calculate cleared percentage
+  let totalSnow = 0;
+  for (const r of game.roads) totalSnow += r.snow;
+  game.cleared = 1 - totalSnow / game.roads.length;
+}
+
+function drawPlow() {
+  // Draw roads
+  for (const r of game.roads) {
+    // Road base (asphalt)
+    ctx.strokeStyle = '#2a3040';
+    ctx.lineWidth = r.width + 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(r.x1,r.y1); ctx.lineTo(r.x2,r.y2); ctx.stroke();
+    // Road markings
+    ctx.strokeStyle = '#3a4050';
+    ctx.lineWidth = r.width;
+    ctx.beginPath(); ctx.moveTo(r.x1,r.y1); ctx.lineTo(r.x2,r.y2); ctx.stroke();
+    // Snow on road
+    if (r.snow > 0.01) {
+      ctx.strokeStyle = `rgba(210,225,240,${r.snow * 0.7})`;
+      ctx.lineWidth = r.width * r.snow;
+      ctx.beginPath(); ctx.moveTo(r.x1,r.y1); ctx.lineTo(r.x2,r.y2); ctx.stroke();
+    }
+    // Cleared glow
+    if (r.snow < 0.1) {
+      ctx.strokeStyle = 'rgba(100,220,180,0.15)';
+      ctx.lineWidth = r.width + 8;
+      ctx.beginPath(); ctx.moveTo(r.x1,r.y1); ctx.lineTo(r.x2,r.y2); ctx.stroke();
+    }
+  }
+  // Plow truck
+  ctx.save();
+  ctx.translate(game.plowX, game.plowY);
+  // Headlights glow
+  ctx.fillStyle = 'rgba(255,220,100,0.15)';
+  ctx.beginPath(); ctx.arc(0,-5,25,0,Math.PI*2); ctx.fill();
+  // Truck body
+  ctx.fillStyle = '#d4a020';
+  ctx.fillRect(-10,-8,20,16);
+  ctx.fillStyle = '#b08818';
+  ctx.fillRect(-12,-4,4,8);
+  // Plow blade
+  ctx.fillStyle = '#888';
+  ctx.fillRect(-14,-10,3,20);
+  ctx.restore();
+  // Target indicator
+  if (game.plowTarget) {
+    const r = game.plowTarget;
+    const mx = (r.x1+r.x2)/2, my = (r.y1+r.y2)/2;
+    ctx.strokeStyle = 'rgba(100,220,180,0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(game.plowX, game.plowY); ctx.lineTo(mx, my); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ═══ MANAGEMENT STAGE ═══
+function initManageStage(s) {
+  game.districts = [];
+  game.mgmtBudget = 500 + game.stage * 200;
+  game.satisfaction = 100;
+  const cols = Math.ceil(Math.sqrt(s.districts));
+  const rows = Math.ceil(s.districts / cols);
+  const margin = 80;
+  const gapX = (W - margin*2) / cols;
+  const gapY = (H - margin*2 - 100) / rows;
+  const names = ['Downtown','Northside','Harbor','Westend','Old Town','Industrial','Eastgate','Hilltop','Riverside','Southpark'];
+  const colors = ['#3366aa','#aa3366','#33aa66','#aa6633','#6633aa','#33aaaa','#aa3333','#33aa33'];
+  for (let i = 0; i < s.districts; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    game.districts.push({
+      name: names[i] || `Sector ${i+1}`,
+      x: margin + col * gapX + gapX/2,
+      y: margin + 60 + row * gapY + gapY/2,
+      w: gapX * 0.85,
+      h: gapY * 0.85,
+      snow: 0.6 + Math.random() * 0.4,
+      crew: 0,  // 0 = no crew assigned, 1+ = crew count
+      color: colors[i % colors.length],
+      satisfaction: 100,
+      population: 1000 + Math.floor(Math.random() * 4000),
+    });
+  }
+  game.totalCells = s.districts;
+  buildMgmtUI();
+}
+
+function buildMgmtUI() {
+  const grid = document.getElementById('mgmtGrid');
+  grid.innerHTML = '';
+  const maxCrews = 1 + getUpgradeEffect('crews');
+  document.getElementById('mgmtTitle').textContent = STAGES[game.stage].mode === 'logistics' ? 'Regional Command' : 'District Management';
+  for (let i = 0; i < game.districts.length; i++) {
+    const d = game.districts[i];
+    const btn = document.createElement('div');
+    btn.className = 'district-btn panel';
+    btn.style.borderColor = d.color + '60';
+    btn.innerHTML = `<b>${d.name}</b><br><span style="font-size:10px">Snow: ${Math.round(d.snow*100)}%</span>`;
+    btn.onclick = () => {
+      const usedCrews = game.districts.reduce((s,d2)=>s+d2.crew, 0);
+      if (d.crew > 0) {
+        d.crew = 0;
+        playSound('click', 0.2);
+      } else if (usedCrews < maxCrews) {
+        d.crew = 1;
+        playSound('upgrade', 0.2);
+        game.mgmtBudget -= 25;
+      }
+      buildMgmtUI();
+    };
+    if (d.crew > 0) { btn.classList.add('assigned'); btn.style.borderColor = '#66ddaa80'; }
+    grid.appendChild(btn);
+  }
+  document.getElementById('mgmtBudget').textContent = '$' + game.mgmtBudget;
+  document.getElementById('hudCrews').textContent = game.districts.reduce((s,d)=>s+d.crew,0) + '/' + maxCrews;
+}
+
+function updateManage(dt, s) {
+  let totalSnow = 0, totalSat = 0;
+  for (const d of game.districts) {
+    // Snow accumulation
+    d.snow = Math.min(1, d.snow + s.snowRate * dt * (0.5 + Math.random() * 0.5));
+    // Crew clearing
+    if (d.crew > 0) {
+      const clearRate = 0.04 * d.crew * getUpgradeEffect('power') * dt;
+      const before = d.snow;
+      d.snow = Math.max(0, d.snow - clearRate);
+      const earned = Math.floor((before - d.snow) * 15 * getUpgradeEffect('income'));
+      game.money += earned;
+      game.stageEarned += earned;
+    }
+    // Satisfaction based on snow level
+    if (d.snow > 0.7) d.satisfaction = Math.max(0, d.satisfaction - 8*dt);
+    else if (d.snow < 0.3) d.satisfaction = Math.min(100, d.satisfaction + 3*dt);
+    totalSnow += d.snow;
+    totalSat += d.satisfaction;
+  }
+  game.cleared = 1 - totalSnow / game.districts.length;
+  game.satisfaction = totalSat / game.districts.length;
+  document.getElementById('hudSat').textContent = Math.round(game.satisfaction) + '%';
+
+  // Update UI periodically
+  if (Math.floor(game.stageTime * 2) !== Math.floor((game.stageTime - dt) * 2)) {
+    buildMgmtUI();
+  }
+}
+
+function drawManage() {
+  for (const d of game.districts) {
+    // District background
+    ctx.fillStyle = d.color + '20';
+    ctx.strokeStyle = d.crew > 0 ? '#66ddaa60' : d.color + '40';
+    ctx.lineWidth = 2;
+    const rx = d.x - d.w/2, ry = d.y - d.h/2;
+    ctx.beginPath();
+    ctx.roundRect(rx, ry, d.w, d.h, 8);
+    ctx.fill();
+    ctx.stroke();
+    // Snow overlay
+    ctx.fillStyle = `rgba(210,225,240,${d.snow * 0.5})`;
+    ctx.beginPath();
+    ctx.roundRect(rx, ry, d.w, d.h, 8);
+    ctx.fill();
+    // District name
+    ctx.fillStyle = '#c0daf0';
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.name, d.x, d.y - 8);
+    // Snow percentage
+    ctx.fillStyle = d.snow > 0.6 ? '#ff8888' : d.snow > 0.3 ? '#ffcc66' : '#66ddaa';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.fillText(`Snow: ${Math.round(d.snow*100)}%`, d.x, d.y + 8);
+    // Crew indicator
+    if (d.crew > 0) {
+      ctx.fillStyle = '#66ddaa';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('👷', d.x, d.y + 28);
+    }
+    // Satisfaction bar
+    const barW = d.w * 0.6, barH = 4;
+    const barX = d.x - barW/2, barY = d.y + d.h/2 - 16;
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(barX, barY, barW, barH);
+    const satColor = d.satisfaction > 70 ? '#66ddaa' : d.satisfaction > 40 ? '#ffcc66' : '#ff6666';
+    ctx.fillStyle = satColor;
+    ctx.fillRect(barX, barY, barW * d.satisfaction / 100, barH);
+  }
+}
+
+// ═══ LOGISTICS STAGE ═══
+function initLogisticsStage(s) {
+  // Reuse management but with cities that contain sub-districts
+  game.districts = [];
+  game.mgmtBudget = 2000;
+  game.satisfaction = 100;
+  game.supplies = 100;
+  const cityNames = ['Frostheim','Glacierton','Snowhaven','Iceport'];
+  const colors = ['#4488cc','#cc4488','#44cc88','#cc8844'];
+  const margin = 80;
+  const positions = [
+    {x:W*0.25, y:H*0.3}, {x:W*0.75, y:H*0.3},
+    {x:W*0.3, y:H*0.65}, {x:W*0.7, y:H*0.65}
+  ];
+  for (let i = 0; i < s.cities; i++) {
+    const pos = positions[i];
+    game.districts.push({
+      name: cityNames[i],
+      x: pos.x, y: pos.y,
+      w: 120, h: 90,
+      snow: 0.5 + Math.random()*0.5,
+      crew: 0,
+      color: colors[i],
+      satisfaction: 100,
+      population: 10000 + Math.floor(Math.random()*40000),
+      supplies: 50 + Math.floor(Math.random()*50),
+      supplyRate: 0,
+    });
+  }
+  game.totalCells = s.cities;
+  buildMgmtUI();
+}
+
+
+// ═══ DIRECT CLEARING MODE ═══
+function updateDirect(dt, stage) {
+  const snow = game.snow;
+  const cs = game.cellSize;
+  const ox = game.offsetX, oy = game.offsetY;
+
+  // Player follows mouse
+  const targetX = game.mouseX;
+  const targetY = game.mouseY;
+  const moveSpeed = 300 * getUpgradeEffect('speed');
+  const dx = targetX - game.playerX;
+  const dy = targetY - game.playerY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist > 5) {
+    const move = Math.min(dist, moveSpeed * dt);
+    game.playerX += (dx/dist) * move;
+    game.playerY += (dy/dist) * move;
+  }
+
+  // Blow snow when mouse is down
+  if (game.mouseDown) {
+    const radius = (1.5 + getUpgradeEffect('radius') * 0.5) * cs;
+    const power = 0.6 * getUpgradeEffect('power');
+    const px = game.playerX, py = game.playerY;
+    let clearedAny = false;
+
+    for (let gy = 0; gy < game.snowGridH; gy++) {
+      for (let gx = 0; gx < game.snowGridW; gx++) {
+        if (snow[gy][gx] <= 0) continue;
+        const cx = ox + gx * cs + cs/2;
+        const cy = oy + gy * cs + cs/2;
+        const d = Math.sqrt((cx-px)**2 + (cy-py)**2);
+        if (d < radius) {
+          const falloff = 1 - d/radius;
+          const clearAmt = power * falloff * dt;
+          const before = snow[gy][gx];
+          snow[gy][gx] = Math.max(0, snow[gy][gx] - clearAmt);
+          if (before > 0 && snow[gy][gx] <= 0) {
+            emitSparkle(cx, cy, 5);
+            clearedAny = true;
+            const earned = Math.ceil(2 * getUpgradeEffect('income'));
+            game.money += earned;
+            game.stageEarned += earned;
+            // Combo
+            game.comboCount++;
+            game.comboTimer = 1.5;
+          }
+          if (before - snow[gy][gx] > 0.01) {
+            const angle = Math.atan2(cy-py, cx-px);
+            if (Math.random() < 0.15) emitSnowBlow(cx, cy, angle, 2, 40 + power*20);
+          }
+        }
+      }
+    }
+
+    if (Math.random() < 0.4) playSound('blow', 0.08);
+    if (clearedAny) game.screenShake = Math.min(5, game.screenShake + 1.5);
+  }
+
+  // Snow re-accumulation
+  if (stage.snowRate > 0) {
+    for (let gy = 0; gy < game.snowGridH; gy++) {
+      for (let gx = 0; gx < game.snowGridW; gx++) {
+        if (snow[gy][gx] < 1 && Math.random() < stage.snowRate) {
+          snow[gy][gx] = Math.min(1, snow[gy][gx] + 0.01);
+        }
+      }
+    }
+  }
+
+  // Combo decay
+  if (game.comboTimer > 0) {
+    game.comboTimer -= dt;
+    if (game.comboTimer <= 0) game.comboCount = 0;
+  }
+
+  // Calculate cleared percentage
+  let totalSnow = 0;
+  for (let gy = 0; gy < game.snowGridH; gy++)
+    for (let gx = 0; gx < game.snowGridW; gx++)
+      totalSnow += snow[gy][gx];
+  game.cleared = 1 - totalSnow / game.totalCells;
+}
+
+function drawDirect() {
+  const snow = game.snow;
+  const cs = game.cellSize;
+  const ox = game.offsetX, oy = game.offsetY;
+
+  // Ground
+  ctx.fillStyle = '#1a2030';
+  ctx.beginPath();
+  ctx.roundRect(ox - 4, oy - 4, game.snowGridW * cs + 8, game.snowGridH * cs + 8, 6);
+  ctx.fill();
+  // Ground texture
+  ctx.fillStyle = '#1e2438';
+  ctx.beginPath();
+  ctx.roundRect(ox, oy, game.snowGridW * cs, game.snowGridH * cs, 4);
+  ctx.fill();
+
+  // Snow cells
+  for (let gy = 0; gy < game.snowGridH; gy++) {
+    for (let gx = 0; gx < game.snowGridW; gx++) {
+      const s = snow[gy][gx];
+      if (s > 0.01) {
+        const x = ox + gx * cs;
+        const y = oy + gy * cs;
+        // Snow color based on depth
+        const brightness = 180 + s * 60;
+        const blue = 220 + s * 35;
+        ctx.fillStyle = `rgba(${brightness},${brightness+10},${Math.min(255,blue)},${0.3 + s * 0.65})`;
+        ctx.fillRect(x, y, cs, cs);
+        // Snow texture (tiny dots for depth)
+        if (s > 0.5 && cs > 8) {
+          ctx.fillStyle = `rgba(255,255,255,${s * 0.2})`;
+          const hash = (gx * 7 + gy * 13) % 5;
+          ctx.fillRect(x + hash, y + (hash+2)%cs, 2, 2);
+        }
+      } else if (s <= 0.01) {
+        // Cleared glow
+        const x = ox + gx * cs + cs/2;
+        const y = oy + gy * cs + cs/2;
+        ctx.fillStyle = 'rgba(100,220,180,0.04)';
+        ctx.fillRect(ox + gx*cs, oy + gy*cs, cs, cs);
+      }
+    }
+  }
+
+  // Border
+  ctx.strokeStyle = 'rgba(100,180,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(ox - 4, oy - 4, game.snowGridW * cs + 8, game.snowGridH * cs + 8, 6);
+  ctx.stroke();
+
+  // Player / Blower
+  const px = game.playerX, py = game.playerY;
+  // Blower effect radius
+  if (game.mouseDown) {
+    const radius = (1.5 + getUpgradeEffect('radius') * 0.5) * cs;
+    ctx.strokeStyle = 'rgba(100,180,255,0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    // Blow cone glow
+    const grad = ctx.createRadialGradient(px, py, 0, px, py, radius);
+    grad.addColorStop(0, 'rgba(100,180,255,0.12)');
+    grad.addColorStop(1, 'rgba(100,180,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI*2); ctx.fill();
+  }
+  // Character
+  ctx.fillStyle = '#ff6644';
+  ctx.beginPath(); ctx.arc(px, py - 6, 6, 0, Math.PI*2); ctx.fill(); // head
+  ctx.fillStyle = '#cc4422';
+  ctx.fillRect(px-4, py, 8, 10); // body
+  // Blower
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(px+4, py+2);
+  const blowAngle = Math.atan2(game.mouseY - py, game.mouseX - px);
+  ctx.lineTo(px+4+Math.cos(blowAngle)*14, py+2+Math.sin(blowAngle)*14);
+  ctx.stroke();
+
+  // Combo text
+  if (game.comboCount > 5) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, game.comboTimer);
+    ctx.fillStyle = '#66ddaa';
+    ctx.font = `bold ${14 + game.comboCount}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${game.comboCount}x COMBO!`, px, py - 30);
+    if (game.comboCount > 15) {
+      ctx.fillStyle = '#ffcc44';
+      ctx.font = `bold ${10 + game.comboCount*0.3}px -apple-system, sans-serif`;
+      ctx.fillText('🔥 ON FIRE!', px, py - 50);
+    }
+    ctx.restore();
+  }
+}
+
+// ═══ TOOLTIP ═══
+function showTooltip(text, dur = 3) {
+  game.tooltip = text;
+  game.tooltipTimer = dur;
+  const el = document.getElementById('tooltip');
+  el.textContent = text;
+  el.style.opacity = '1';
+}
+
+// ═══ UI UPDATES ═══
+function updateHUD() {
+  document.getElementById('hudMoney').textContent = '$' + game.money;
+  const pct = Math.round(game.cleared * 100);
+  document.getElementById('hudPercent').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = (game.cleared * 100) + '%';
+  const mins = Math.floor(game.stageTime / 60);
+  const secs = Math.floor(game.stageTime % 60);
+  document.getElementById('hudTime').textContent = mins + ':' + String(secs).padStart(2,'0');
+}
+
+// ═══ SHOP ═══
+function showShop() {
+  game.state = 'shop';
+  document.getElementById('shopScreen').style.display = 'flex';
+  document.getElementById('gameHUD').style.display = 'none';
+  document.getElementById('mgmtPanel').style.display = 'none';
+  document.getElementById('shopMoneyVal').textContent = '$' + game.money;
+
+  const grid = document.getElementById('shopGrid');
+  grid.innerHTML = '';
+  for (const u of UPGRADES) {
+    const lvl = getUpgradeLevel(u.id);
+    const maxed = lvl >= u.maxLvl;
+    const cost = getUpgradeCost(u.id);
+    const canAfford = game.money >= cost;
+    // Only show crews upgrade if approaching management stages
+    if (u.id === 'crews' && game.stage < 4) continue;
+    if (u.id === 'forecast' && game.stage < 4) continue;
+
+    const item = document.createElement('div');
+    item.className = 'shop-item panel' + (maxed ? ' owned' : '');
+    item.innerHTML = `
+      <h3>${u.icon} ${u.name} ${maxed ? '✅' : `(Lv ${lvl})`}</h3>
+      <p>${u.desc}</p>
+      <div class="price">${maxed ? 'MAXED' : (canAfford ? '' : '🔒 ') + '$' + cost}</div>
+    `;
+    if (!maxed && canAfford) {
+      item.onclick = () => {
+        game.upgrades[u.id] = lvl + 1;
+        game.money -= cost;
+        playSound('upgrade', 0.4);
+        showShop(); // Refresh
+      };
+    }
+    grid.appendChild(item);
+  }
+
+  // Next stage button
+  const btn = document.getElementById('btnNextStage');
+  if (game.stage >= STAGES.length - 1) {
+    btn.textContent = '🏆 You Won!';
+    btn.onclick = () => {
+      showTooltip('You conquered the Arctic! Thanks for playing!', 5);
+      game.state = 'menu';
+      document.getElementById('shopScreen').style.display = 'none';
+      document.getElementById('startScreen').style.display = 'flex';
+    };
+  } else {
+    btn.textContent = `Next: ${STAGES[game.stage + 1].name} ➜`;
+    btn.onclick = () => {
+      document.getElementById('shopScreen').style.display = 'none';
+      game.state = 'playing';
+      initStage(game.stage + 1);
+    };
+  }
+}
+
+function showStageComplete() {
+  game.state = 'stageComplete';
+  playSound('complete', 0.4);
+  const s = STAGES[game.stage];
+  const bonus = game.stageTime < 60 ? s.reward : game.stageTime < 120 ? Math.floor(s.reward*0.5) : 0;
+  game.money += s.reward + bonus;
+  game.stageEarned += s.reward + bonus;
+
+  document.getElementById('stageComplete').style.display = 'flex';
+  document.getElementById('gameHUD').style.display = 'none';
+  document.getElementById('mgmtPanel').style.display = 'none';
+  const mins = Math.floor(game.stageTime/60);
+  const secs = Math.floor(game.stageTime%60);
+  document.getElementById('statTime').textContent = mins+':'+String(secs).padStart(2,'0');
+  document.getElementById('statEarned').textContent = '$' + game.stageEarned;
+  if (bonus > 0) {
+    document.getElementById('statBonus').style.display = 'block';
+    document.getElementById('statBonus').textContent = `⚡ Speed bonus: +$${bonus}!`;
+  } else {
+    document.getElementById('statBonus').style.display = 'none';
+  }
+  // Burst particles
+  for (let i = 0; i < 40; i++) {
+    emitSparkle(W/2 + (Math.random()-0.5)*200, H/2 + (Math.random()-0.5)*100, 3);
+  }
+}
+
+// ═══ MAIN GAME LOOP ═══
+let lastTime = performance.now();
+
+function gameLoop(now) {
+  const rawDt = (now - lastTime) / 1000;
+  const dt = Math.min(rawDt, 0.05); // Cap delta time
+  lastTime = now;
+  const t = now / 1000;
+
+  // Screen shake decay
+  game.screenShake *= 0.9;
+  if (game.screenShake < 0.1) game.screenShake = 0;
+
+  // Apply screen shake
+  ctx.save();
+  if (game.screenShake > 0) {
+    ctx.translate(
+      (Math.random()-0.5) * game.screenShake * 2,
+      (Math.random()-0.5) * game.screenShake * 2
+    );
+  }
+
+  // Draw background
+  drawBackground(t);
+
+  // Snow ground plane in background (distant snow-covered terrain)
+  const groundY = H * 0.75;
+  const groundGrad = ctx.createLinearGradient(0, groundY, 0, H);
+  groundGrad.addColorStop(0, 'rgba(180,200,220,0.08)');
+  groundGrad.addColorStop(1, 'rgba(140,160,180,0.03)');
+  ctx.fillStyle = groundGrad;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  for (let x = 0; x <= W; x += 20) {
+    ctx.lineTo(x, groundY + Math.sin(x*0.01+t*0.2)*8 + Math.sin(x*0.03)*4);
+  }
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Ambient snow
+  emitAmbientSnow();
+
+  if (game.state === 'playing') {
+    const s = STAGES[game.stage];
+    game.stageTime += dt;
+    ambientWind(dt);
+
+    // Update based on mode
+    if (s.mode === 'direct') {
+      updateDirect(dt, s);
+      drawDirect();
+    } else if (s.mode === 'plow') {
+      updatePlow(dt, s);
+      drawPlow();
+    } else if (s.mode === 'manage' || s.mode === 'logistics') {
+      updateManage(dt, s);
+      drawManage();
+    }
+
+    // Check stage completion
+    if (game.cleared >= s.target) {
+      showStageComplete();
+    }
+
+    updateHUD();
+  }
+
+  // Particles always render
+  updateParticles(dt);
+  drawParticles();
+
+  // Tooltip fade
+  if (game.tooltipTimer > 0) {
+    game.tooltipTimer -= dt;
+    if (game.tooltipTimer <= 0) {
+      document.getElementById('tooltip').style.opacity = '0';
+    }
+  }
+
+  ctx.restore();
+  requestAnimationFrame(gameLoop);
+}
+
+// ═══ UI EVENT HANDLERS ═══
+document.getElementById('btnStart').onclick = () => {
+  initAudio();
+  game.state = 'playing';
+  game.money = 0;
+  game.upgrades = {};
+  document.getElementById('startScreen').style.display = 'none';
+  initStage(0);
+  playSound('click', 0.3);
+};
+
+document.getElementById('btnToShop').onclick = () => {
+  document.getElementById('stageComplete').style.display = 'none';
+  playSound('click', 0.3);
+  showShop();
+};
+
+// ═══ START ═══
+document.getElementById('startScreen').style.display = 'flex';
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>
