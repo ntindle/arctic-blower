@@ -9,7 +9,8 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e0e8f0;user-select:none;-webkit-user-select:none;touch-action:none}
 canvas{display:block;width:100%;height:100%}
 #ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-#ui *{pointer-events:auto}
+#ui .btn,#ui .shop-item,#ui .district-btn{pointer-events:auto}
+#startScreen,#shopScreen,#stageComplete{pointer-events:auto}
 .panel{background:rgba(10,14,26,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(100,180,255,0.15);border-radius:12px;padding:16px}
 .btn{background:linear-gradient(135deg,#1a3a5c,#0d2240);border:1px solid rgba(100,180,255,0.3);color:#c0daf0;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;transition:all 0.2s;font-family:inherit}
 .btn:hover{background:linear-gradient(135deg,#1e4a70,#153050);border-color:rgba(100,180,255,0.6);box-shadow:0 0 20px rgba(100,180,255,0.2);transform:translateY(-1px)}
@@ -391,19 +392,19 @@ function drawBackground(t) {
 
 // ═══ STAGE DEFINITIONS ═══
 const STAGES = [
-  { name:'Front Porch', gridW:16, gridH:12, tool:'Leaf Blower', target:0.85, snowRate:0, reward:50, mode:'direct',
+  { name:'Front Porch', gridW:14, gridH:10, tool:'Leaf Blower', target:0.85, snowRate:0, reward:50, mode:'direct',
     desc:'A cozy porch buried in snow. Time to warm up that leaf blower.' },
-  { name:'Sidewalk', gridW:24, gridH:14, tool:'Leaf Blower', target:0.85, snowRate:0.001, reward:100, mode:'direct',
+  { name:'Sidewalk', gridW:20, gridH:12, tool:'Leaf Blower', target:0.85, snowRate:0.0003, reward:100, mode:'direct',
     desc:'The neighbors are watching. Make it spotless.' },
-  { name:'Driveway', gridW:32, gridH:20, tool:'Power Blower', target:0.80, snowRate:0.003, reward:200, mode:'direct',
+  { name:'Driveway', gridW:26, gridH:16, tool:'Power Blower', target:0.80, snowRate:0.0008, reward:200, mode:'direct',
     desc:'Someone needs to get to work. Better hurry.' },
-  { name:'Parking Lot', gridW:42, gridH:28, tool:'Snow Blower', target:0.75, snowRate:0.005, reward:400, mode:'direct',
+  { name:'Parking Lot', gridW:34, gridH:22, tool:'Snow Blower', target:0.75, snowRate:0.001, reward:400, mode:'direct',
     desc:'The mall opens in an hour. 60 spaces to clear.' },
-  { name:'Main Street', roadCount:12, tool:'Plow Truck', target:0.80, snowRate:0.01, reward:800, mode:'plow',
+  { name:'Main Street', roadCount:10, tool:'Plow Truck', target:0.75, snowRate:0.003, reward:800, mode:'plow',
     desc:'Strap into the plow. Keep the roads moving.' },
-  { name:'Frostville', districts:6, tool:'Fleet Manager', target:0.70, snowRate:0.015, reward:1500, mode:'manage',
+  { name:'Frostville', districts:6, tool:'Fleet Manager', target:0.65, snowRate:0.004, reward:1500, mode:'manage',
     desc:'You run the show now. Assign crews. Keep the city happy.' },
-  { name:'Arctic Region', cities:4, tool:'Regional Director', target:0.65, snowRate:0.008, reward:3000, mode:'logistics',
+  { name:'Arctic Region', cities:4, tool:'Regional Director', target:0.60, snowRate:0.003, reward:3000, mode:'logistics',
     desc:'Four cities. One budget. Blizzards incoming. Good luck.' },
 ];
 
@@ -450,7 +451,7 @@ const game = {
   plowX: 0,
   plowY: 0,
   plowTarget: null,
-  plowSpeed: 120,
+  plowSpeed: 200,
   // Management mode
   districts: [],
   mgmtBudget: 0,
@@ -482,11 +483,11 @@ function getPos(e) {
 }
 
 C.addEventListener('mousedown', e => { initAudio(); game.mouseDown = true; const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; });
-C.addEventListener('mouseup', () => { game.mouseDown = false; });
-C.addEventListener('mousemove', e => { const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; });
+window.addEventListener('mouseup', () => { game.mouseDown = false; });
+window.addEventListener('mousemove', e => { const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; });
 C.addEventListener('touchstart', e => { e.preventDefault(); initAudio(); game.mouseDown = true; const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; }, {passive:false});
-C.addEventListener('touchend', e => { e.preventDefault(); game.mouseDown = false; }, {passive:false});
-C.addEventListener('touchmove', e => { e.preventDefault(); const p = getPos(e); game.mouseX = p.x; game.mouseY = p.y; }, {passive:false});
+window.addEventListener('touchend', e => { game.mouseDown = false; });
+window.addEventListener('touchmove', e => { if (game.state==='playing') e.preventDefault(); if(e.touches&&e.touches.length){const p=getPos(e);game.mouseX=p.x;game.mouseY=p.y;} }, {passive:false});
 
 // ═══ STAGE INITIALIZATION ═══
 function initStage(idx) {
@@ -597,7 +598,7 @@ function updatePlow(dt, s) {
       // Arrived - clear the road
       if (r.snow > 0.1) {
         const cleared = r.snow;
-        r.snow = Math.max(0, r.snow - 0.4 * getUpgradeEffect('power'));
+        r.snow = Math.max(0, r.snow - 0.6 * getUpgradeEffect('power'));
         if (r.snow < 0.15) r.snow = 0;
         const earned = Math.floor(cleared * 8 * getUpgradeEffect('income'));
         game.money += earned;
@@ -620,7 +621,7 @@ function updatePlow(dt, s) {
         const px = road.x1+t*rdx, py = road.y1+t*rdy;
         const d = Math.sqrt((game.plowX-px)**2+(game.plowY-py)**2);
         if (d < 25) {
-          const clearRate = 0.8 * getUpgradeEffect('power') * dt;
+          const clearRate = 1.5 * getUpgradeEffect('power') * dt;
           if (road.snow > 0) {
             road.snow = Math.max(0, road.snow - clearRate);
             if (Math.random() < 0.3) emitSnowBlow(game.plowX, game.plowY, Math.atan2(game.plowY-py,game.plowX-px), 3, 50);
@@ -756,7 +757,7 @@ function updateManage(dt, s) {
     d.snow = Math.min(1, d.snow + s.snowRate * dt * (0.5 + Math.random() * 0.5));
     // Crew clearing
     if (d.crew > 0) {
-      const clearRate = 0.04 * d.crew * getUpgradeEffect('power') * dt;
+      const clearRate = 0.15 * d.crew * getUpgradeEffect('power') * dt;
       const before = d.snow;
       d.snow = Math.max(0, d.snow - clearRate);
       const earned = Math.floor((before - d.snow) * 15 * getUpgradeEffect('income'));
@@ -876,8 +877,8 @@ function updateDirect(dt, stage) {
 
   // Blow snow when mouse is down
   if (game.mouseDown) {
-    const radius = (1.5 + getUpgradeEffect('radius') * 0.5) * cs;
-    const power = 0.6 * getUpgradeEffect('power');
+    const radius = (2.0 + getUpgradeEffect('radius') * 0.6) * cs;
+    const power = 2.5 * getUpgradeEffect('power');
     const px = game.playerX, py = game.playerY;
     let clearedAny = false;
 
@@ -994,7 +995,7 @@ function drawDirect() {
   const px = game.playerX, py = game.playerY;
   // Blower effect radius
   if (game.mouseDown) {
-    const radius = (1.5 + getUpgradeEffect('radius') * 0.5) * cs;
+    const radius = (2.0 + getUpgradeEffect('radius') * 0.6) * cs;
     ctx.strokeStyle = 'rgba(100,180,255,0.2)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4,4]);
