@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Arctic Blower ❄️</title>
+<title>Arctic Blower ❄️ — Snow Removal Empire</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e0e8f0;user-select:none;-webkit-user-select:none;touch-action:none}
@@ -18,8 +18,10 @@ canvas{display:block;width:100%;height:100%}
 .btn-primary:hover{background:linear-gradient(135deg,#1e6a48,#155030);border-color:rgba(100,255,180,0.6);box-shadow:0 0 20px rgba(100,255,180,0.2)}
 .btn-gold{background:linear-gradient(135deg,#5a4a1a,#403008);border-color:rgba(255,200,80,0.4)}
 .btn-gold:hover{background:linear-gradient(135deg,#6a5a20,#504010);border-color:rgba(255,200,80,0.7);box-shadow:0 0 20px rgba(255,200,80,0.25)}
+.btn-danger{background:linear-gradient(135deg,#5a1a1a,#400808);border-color:rgba(255,100,80,0.4)}
+.btn-danger:hover{background:linear-gradient(135deg,#6a2020,#501010);border-color:rgba(255,100,80,0.7);box-shadow:0 0 20px rgba(255,100,80,0.25)}
 .btn-disabled{opacity:0.4;cursor:default;pointer-events:none}
-#startScreen,#shopScreen,#stageComplete,#gameHUD{display:none;position:absolute}
+#startScreen,#shopScreen,#stormReport,#gameHUD{display:none;position:absolute}
 #startScreen{top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:100}
 #startScreen h1{font-size:clamp(32px,8vw,64px);font-weight:800;background:linear-gradient(135deg,#88ccff,#ffffff,#aaddff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;letter-spacing:-1px}
 #startScreen .subtitle{font-size:clamp(12px,3vw,18px);color:#6090b0;letter-spacing:2px;text-transform:uppercase}
@@ -29,10 +31,12 @@ canvas{display:block;width:100%;height:100%}
 .hud-item span{color:#c0daf0;font-weight:600}
 #progressBar{width:clamp(100px,25vw,180px);height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
 #progressFill{height:100%;background:linear-gradient(90deg,#4488cc,#66ddaa);border-radius:3px;transition:width 0.3s;width:0}
+#stormBar{width:clamp(100px,25vw,180px);height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-top:2px}
+#stormFill{height:100%;background:linear-gradient(90deg,#6666dd,#aa44cc);border-radius:3px;transition:width 0.3s;width:0}
 .hud-center{display:flex;flex-direction:column;align-items:center;gap:6px}
-#shopScreen{top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:90;background:rgba(5,8,15,0.92);overflow-y:auto;padding:30px 0}
+#shopScreen{top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:flex-start;gap:16px;z-index:90;background:rgba(5,8,15,0.94);overflow-y:auto;padding:30px 0}
 #shopScreen h2{font-size:22px;color:#88ccff;margin-top:10px}
-.shop-section{width:90%;max-width:700px}
+.shop-section{width:90%;max-width:700px;margin-bottom:12px}
 .shop-section h3{font-size:14px;color:#6090b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-left:4px}
 .shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
 .shop-item{text-align:center;padding:14px 10px;cursor:pointer;transition:all 0.2s}
@@ -40,20 +44,20 @@ canvas{display:block;width:100%;height:100%}
 .shop-item.owned{border-color:rgba(100,255,150,0.3);opacity:0.5;cursor:default}
 .shop-item.locked{opacity:0.35;cursor:default}
 .shop-item h4{font-size:13px;margin-bottom:3px;color:#aaddff}
-.shop-item p{font-size:10px;color:#607890;margin-bottom:6px}
+.shop-item p{font-size:10px;color:#607890;margin-bottom:6px;line-height:1.4}
 .shop-item .price{font-size:15px;font-weight:700;color:#66ddaa}
 .shop-item .price.gold{color:#ffcc44}
-#stageComplete{top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:80;background:rgba(5,8,15,0.88)}
-#stageComplete h2{font-size:28px;color:#66ddaa}
-.stat-row{display:flex;gap:24px;font-size:14px;color:#80a0c0}
+#stormReport{top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:80;background:rgba(5,8,15,0.88)}
+#stormReport h2{font-size:28px;color:#66ddaa}
+.stat-row{display:flex;gap:24px;font-size:14px;color:#80a0c0;flex-wrap:wrap;justify-content:center}
 .stat-row span{color:#c0daf0;font-weight:600}
-#tooltip{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-size:13px;color:#6090b0;text-align:center;z-index:55;opacity:0;transition:opacity 0.5s;pointer-events:none}
-#mgmtPanel{position:absolute;bottom:12px;left:12px;right:12px;z-index:50;display:none}
-.mgmt-grid{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.district-btn{padding:8px 14px;font-size:11px;border-radius:6px;cursor:pointer;transition:all 0.2s}
-.district-btn:hover{transform:scale(1.05)}
-.district-btn.assigned{box-shadow:0 0 10px rgba(100,255,180,0.3)}
+#tooltip{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-size:13px;color:#6090b0;text-align:center;z-index:55;opacity:0;transition:opacity 0.5s;pointer-events:none;max-width:80%}
 .money-pop{position:absolute;pointer-events:none;font-weight:700;font-size:14px;color:#66ddaa;z-index:60;text-shadow:0 1px 4px rgba(0,0,0,0.5)}
+.storm-warning{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(24px,5vw,42px);font-weight:800;color:#aaccff;text-shadow:0 0 30px rgba(100,150,255,0.6);z-index:55;pointer-events:none;opacity:0;transition:opacity 0.5s}
+.tab-bar{display:flex;gap:4px;margin-bottom:10px;width:90%;max-width:700px}
+.tab-btn{flex:1;padding:8px;border:1px solid rgba(100,180,255,0.2);background:rgba(20,30,50,0.5);color:#6090b0;border-radius:8px 8px 0 0;cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.2s;text-align:center}
+.tab-btn.active{background:rgba(30,50,80,0.8);color:#aaddff;border-color:rgba(100,180,255,0.4)}
+.tab-btn:hover{background:rgba(30,50,80,0.6)}
 </style>
 </head>
 <body>
@@ -61,46 +65,40 @@ canvas{display:block;width:100%;height:100%}
 <div id="ui">
 <div id="gameHUD">
 <div class="hud-left">
-<div class="hud-item">📍 <span id="hudStage">Front Porch</span></div>
-<div class="hud-item">🔧 <span id="hudTool">Leaf Blower</span></div>
-<div class="hud-item" id="hudCrewItem" style="display:none">👷 Crews: <span id="hudCrews">0</span></div>
+<div class="hud-item">📍 <span id="hudArea">Front Porch</span></div>
+<div class="hud-item">🔧 <span id="hudTool">Snow Shovel</span></div>
+<div class="hud-item">🌨️ Storm: <span id="hudStorm">Calm</span></div>
 </div>
 <div class="hud-center">
-<div id="progressBar"><div id="progressFill"></div></div>
 <div class="hud-item" style="font-size:11px"><span id="hudPercent">0%</span> cleared</div>
-<button class="btn" id="btnShop" style="padding:6px 16px;font-size:12px;margin-top:2px">🛒 Business HQ</button>
+<div id="progressBar"><div id="progressFill"></div></div>
+<div class="hud-item" style="font-size:10px;color:#8866cc">⛈️ Storm Power</div>
+<div id="stormBar"><div id="stormFill"></div></div>
+<button class="btn" id="btnShop" style="padding:6px 16px;font-size:12px;margin-top:4px">🏢 Business HQ</button>
 </div>
 <div class="hud-right" style="align-items:flex-end">
 <div class="hud-item" style="font-size:14px">💰 <span id="hudMoney" style="font-size:16px">$0</span></div>
-<div class="hud-item">📈 <span id="hudRate">$0/s</span></div>
-<div class="hud-item" id="hudSatItem" style="display:none">😊 <span id="hudSat">100%</span></div>
+<div class="hud-item">📦 Volume: <span id="hudVolume">0</span></div>
+<div class="hud-item">💵 Rate: <span id="hudRate">$0.50/unit</span></div>
 </div>
 </div>
-
 <div id="tooltip"></div>
-<div id="mgmtPanel">
-<div class="panel" style="padding:10px">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-<span style="font-size:13px;font-weight:600" id="mgmtTitle">District Management</span>
-<span class="hud-item" style="font-size:12px;pointer-events:none">Budget: 💰<span id="mgmtBudget">$0</span>/day</span>
-</div>
-<div class="mgmt-grid" id="mgmtGrid"></div>
-</div>
-</div>
+<div class="storm-warning" id="stormWarning">⛈️ STORM INCOMING! ⛈️</div>
 </div>
 
 <div id="startScreen" style="display:flex">
 <h1>❄️ ARCTIC BLOWER</h1>
-<div class="subtitle">Snow Clearing Business Simulator</div>
-<div class="panel" style="text-align:center;max-width:380px">
+<div class="subtitle">Snow Removal Empire Simulator</div>
+<div class="panel" style="text-align:center;max-width:420px">
 <p style="font-size:13px;color:#6090b0;line-height:1.7;margin-bottom:16px">
-Start a snow clearing business in the Arctic Circle.<br>
-Clear snow. Earn money. Upgrade your tools.<br>
-Take on bigger contracts. Build an empire.
+Snow is your livelihood. More snow means more money.<br>
+Clear snow. Get paid by volume. Invest in better tools.<br>
+And maybe... make it snow a little more. 😈<br>
+<span style="color:#8866cc;font-size:11px;margin-top:4px;display:inline-block">What? It's not illegal if nobody can prove it.</span>
 </p>
-<button class="btn btn-primary" id="btnStart" style="font-size:16px;padding:12px 40px">▶ START YOUR BUSINESS</button>
+<button class="btn btn-primary" id="btnStart" style="font-size:16px;padding:12px 40px">▶ START SHOVELING</button>
 </div>
-<div style="font-size:11px;color:#405060;margin-top:8px">Click & hold to blow snow • Earn 💰 • Grow your business</div>
+<div style="font-size:11px;color:#405060;margin-top:8px">Click & drag to clear snow • Get paid per unit cleared • Make it snow more 🌨️</div>
 </div>
 
 <div id="shopScreen">
@@ -109,19 +107,21 @@ Take on bigger contracts. Build an empire.
 <button class="btn" id="btnCloseShop" style="padding:8px 20px;font-size:13px">✕ Back to Work</button>
 </div>
 <div id="shopMoney" class="hud-item" style="justify-content:center;font-size:18px;margin-bottom:4px">💰 <span id="shopMoneyVal">$0</span></div>
+<div class="tab-bar" id="shopTabs"></div>
 <div id="shopSections"></div>
 </div>
 
-<div id="stageComplete">
-<h2 id="scTitle">📋 New Contract Accepted!</h2>
-<p id="scDesc" style="font-size:14px;color:#80a0c0;text-align:center;max-width:400px"></p>
-<button class="btn btn-primary" id="btnStartContract" style="margin-top:8px">Let's Go! ➜</button>
+<div id="stormReport">
+<h2 id="srTitle">⛈️ Storm Complete!</h2>
+<div class="stat-row" id="srStats"></div>
+<p id="srMessage" style="font-size:13px;color:#6090b0;text-align:center;max-width:420px;margin-top:8px;line-height:1.5"></p>
+<button class="btn btn-primary" id="btnNextStorm" style="margin-top:12px">Bring On The Next Storm ➜</button>
 </div>
 
 <script>
-// ════════════════════════════════════════════════
-// ARCTIC BLOWER — Snow Clearing Business Simulator
-// ════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// ARCTIC BLOWER v4 — "The Arsonist Firefighter of Winter"
+// ════════════════════════════════════════════════════════
 
 const C = document.getElementById('game');
 const ctx = C.getContext('2d');
@@ -191,12 +191,21 @@ function playSound(type, vol = 0.3) {
     const o = audioCtx.createOscillator(); o.type = 'sine';
     o.frequency.setValueAtTime(1200, now); o.frequency.exponentialRampToValueAtTime(1600, now+0.08);
     o.connect(g); g.gain.exponentialRampToValueAtTime(0.01, now + 0.12); o.start(now); o.stop(now + 0.12);
+  } else if (type === 'storm') {
+    const dur = 3;
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * dur, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1);
+    const src = audioCtx.createBufferSource(); src.buffer = buf;
+    const filt = audioCtx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 200; filt.Q.value = 1;
+    src.connect(filt); filt.connect(g);
+    g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(vol*0.3, now+0.8); g.gain.linearRampToValueAtTime(0, now+dur);
+    src.start(now);
   }
 }
 
 let windTimer = 0;
 function ambientWind(dt) { windTimer -= dt; if (windTimer <= 0) { playSound('wind', 0.15); windTimer = 4 + Math.random() * 5; } }
-
 
 // ═══ PARTICLES ═══
 class Particle {
@@ -207,7 +216,7 @@ class Particle {
   }
 }
 const particles = [];
-const MAX_P = 600;
+const MAX_P = 800;
 
 function emitSnow(x,y,angle,count,force) {
   for (let i=0;i<count&&particles.length<MAX_P;i++) {
@@ -227,9 +236,15 @@ function emitSparkle(x,y,count) {
   }
 }
 function emitAmbient() {
-  if (particles.length<MAX_P&&Math.random()<0.25)
-    particles.push(new Particle(Math.random()*W,-5,(Math.random()-0.5)*20,15+Math.random()*25,
-      3+Math.random()*3,1+Math.random()*3,`rgba(200,220,255,${0.15+Math.random()*0.25})`,'ambient'));
+  // Ambient snowfall scales with storm intensity
+  const stormMult = game.stormActive ? (1 + game.stormIntensity * 3) : 0.5;
+  const chance = 0.15 * stormMult;
+  if (particles.length < MAX_P && Math.random() < chance)
+    particles.push(new Particle(Math.random()*W,-5,
+      (Math.random()-0.5)*20 * (game.stormActive ? 3 : 1),
+      (15+Math.random()*25) * (game.stormActive ? 1.5 : 1),
+      3+Math.random()*3, 1+Math.random()*(game.stormActive ? 5 : 3),
+      `rgba(200,220,255,${0.15+Math.random()*0.25})`,'ambient'));
 }
 function updateParticles(dt) {
   for (let i=particles.length-1;i>=0;i--) {
@@ -276,82 +291,177 @@ function drawStars(t) {
 }
 function drawBackground(t) {
   const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#050810');g.addColorStop(0.4,'#0a1020');g.addColorStop(0.7,'#101828');g.addColorStop(1,'#1a2535');
+  // Darken sky during storms
+  if (game.stormActive) {
+    const si = game.stormIntensity;
+    g.addColorStop(0,`rgb(${5-si*3},${8-si*4},${16-si*6})`);
+    g.addColorStop(0.4,`rgb(${10-si*5},${16-si*6},${32-si*10})`);
+    g.addColorStop(1,`rgb(${26-si*8},${37-si*10},${53-si*15})`);
+  } else {
+    g.addColorStop(0,'#050810');g.addColorStop(0.4,'#0a1020');g.addColorStop(0.7,'#101828');g.addColorStop(1,'#1a2535');
+  }
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  drawStars(t);drawAurora(t);
+  if (!game.stormActive || game.stormIntensity < 0.6) { drawStars(t); }
+  drawAurora(t);
 }
 
+// ═══════════════════════════════════════
+// GAME DESIGN: The Arsonist Firefighter
+// ═══════════════════════════════════════
+// You're a snow removal person who secretly causes more snow.
+// Phase 1: Clear snow, get paid by VOLUME. Invest in:
+//   - Better clearing tools (shovel → leaf blower → power blower → plow)
+//   - Weather manipulation (make it snow MORE to generate more business)
+// The tension: more snow = more money BUT you must keep up or lose clients
+//
+// Storm cycle: Storm → Clear → Downtime (plan/upgrade) → Storm
+// Weather manipulation increases storm frequency & intensity
 
-// ═══ STAGE DEFINITIONS ═══
-// Each stage is a "contract" you accept. Bigger contracts = more money, more challenge.
-const STAGES = [
-  { name:'Front Porch', gridW:14, gridH:10, tool:'Leaf Blower', snowRate:0.15, payRate:3,
-    unlockCost:0, mode:'direct',
-    desc:'Your first gig. Mrs. Henderson\'s porch. Keep it clear, get paid.' },
-  { name:'Sidewalk', gridW:20, gridH:12, tool:'Leaf Blower', snowRate:0.25, payRate:6,
-    unlockCost:80, mode:'direct',
-    desc:'HOA contract. They pay by the hour — as long as the walk stays clear.' },
-  { name:'Driveway', gridW:26, gridH:16, tool:'Power Blower', snowRate:0.4, payRate:12,
-    unlockCost:250, mode:'direct',
-    desc:'The Johnsons need their driveway clear for the morning commute. Every morning.' },
-  { name:'Parking Lot', gridW:34, gridH:22, tool:'Snow Blower', snowRate:0.6, payRate:22,
-    unlockCost:600, mode:'direct',
-    desc:'Commercial contract. FrostMart pays well, but 60 spaces is a lot to maintain.' },
-  { name:'Main Street', roadCount:10, tool:'Plow Truck', snowRate:0.8, payRate:40,
-    unlockCost:1500, mode:'plow',
-    desc:'City contract. Keep the roads clear, collect your check. Let snow pile up, lose it.' },
-  { name:'Frostville', districts:6, tool:'Fleet Manager', snowRate:1.0, payRate:70,
-    unlockCost:3500, mode:'manage',
-    desc:'Six districts paying you to keep them happy. Snow means complaints.' },
-  { name:'Arctic Region', cities:4, tool:'Regional Director', snowRate:0.8, payRate:120,
-    unlockCost:8000, mode:'logistics',
-    desc:'Four cities. Massive budget. But if snow piles up, you\'re fired.' },
+// ═══ TOOL DEFINITIONS ═══
+const TOOLS = [
+  { id:'shovel', name:'Snow Shovel', radius:1.2, power:1.0, speed:1.0, cost:0, icon:'🪣',
+    desc:'Humble beginnings. Back-breaking work, but it pays the bills.' },
+  { id:'leafblower', name:'Leaf Blower', radius:1.8, power:1.8, speed:1.2, cost:75, icon:'🌬️',
+    desc:'Not technically designed for snow. Works surprisingly well.' },
+  { id:'powerblower', name:'Power Blower', radius:2.4, power:3.0, speed:1.4, cost:300, icon:'💨',
+    desc:'Industrial grade. Your neighbors think you\'re insane.' },
+  { id:'snowblower', name:'Snow Blower', radius:3.2, power:5.0, speed:1.3, cost:800, icon:'🔧',
+    desc:'The real deal. You look semi-professional now.' },
+  { id:'plow', name:'Plow Truck', radius:4.5, power:9.0, speed:1.8, cost:2500, icon:'🚛',
+    desc:'People actually take you seriously. Terrifying.' },
 ];
 
-// ═══ UPGRADES ═══
-const UPGRADES = [
-  { id:'radius', name:'Wider Blast', desc:'+30% blow radius', baseCost:50, maxLvl:5, icon:'💨',
-    effect: lvl => 1 + lvl * 0.3 },
-  { id:'power', name:'More Power', desc:'+35% clearing speed', baseCost:70, maxLvl:5, icon:'⚡',
-    effect: lvl => 1 + lvl * 0.35 },
-  { id:'speed', name:'Move Speed', desc:'+20% movement speed', baseCost:40, maxLvl:4, icon:'🏃',
-    effect: lvl => 1 + lvl * 0.2 },
-  { id:'income', name:'Tip Jar', desc:'+30% earnings', baseCost:100, maxLvl:5, icon:'💰',
-    effect: lvl => 1 + lvl * 0.3 },
-  { id:'crews', name:'Hire Crew', desc:'+1 crew member', baseCost:400, maxLvl:4, icon:'👷',
-    effect: lvl => lvl },
-  { id:'antisnow', name:'De-Icer', desc:'20% less snowfall = easier to maintain income', baseCost:150, maxLvl:3, icon:'🧪',
-    effect: lvl => 1 - lvl * 0.2 },
+// ═══ WEATHER MANIPULATION UPGRADES ═══
+// Escalates from desperate/funny to full sci-fi
+const WEATHER_UPGRADES = [
+  { id:'prayer', name:'Pray for Snow', snowBoost:0.05, stormChance:0.02, cost:10, icon:'🙏',
+    desc:'Stand outside and ask the sky nicely. Surprisingly, it seems to work?', flavor:'Faith-based meteorology.' },
+  { id:'bribe_met', name:'Bribe a Meteorologist', snowBoost:0.1, stormChance:0.05, cost:50, icon:'📺',
+    desc:'He can\'t actually control the weather. ...Can he?', flavor:'$50 in an envelope. Very professional.' },
+  { id:'snowdance', name:'Snow Dance Ritual', snowBoost:0.15, stormChance:0.08, cost:150, icon:'💃',
+    desc:'You learned this from a YouTube video. Your neighbors are concerned.', flavor:'The HOA has sent 3 letters.' },
+  { id:'dry_ice', name:'Dry Ice Bombing', snowBoost:0.2, stormChance:0.12, cost:400, icon:'🧊',
+    desc:'Drop dry ice from a rented Cessna. This is definitely not legal.', flavor:'The FAA would like a word.' },
+  { id:'cloud_seeder', name:'Cloud Seeding Drone', snowBoost:0.3, stormChance:0.15, cost:1000, icon:'🛸',
+    desc:'Silver iodide dispersal system. You\'re basically a Bond villain now.', flavor:'Patent pending. Probably.' },
+  { id:'haarp_lite', name:'HAARP Jr.', snowBoost:0.4, stormChance:0.2, cost:2500, icon:'📡',
+    desc:'A small antenna array in your backyard. The conspiracy theorists were RIGHT.', flavor:'Side effects include: more snow.' },
+  { id:'weather_sat', name:'Weather Satellite', snowBoost:0.5, stormChance:0.25, cost:6000, icon:'🛰️',
+    desc:'You launched a satellite. A SATELLITE. For snow.', flavor:'NASA called. They\'re impressed and terrified.' },
+  { id:'storm_engine', name:'Storm Engine', snowBoost:0.7, stormChance:0.35, cost:15000, icon:'⚡',
+    desc:'Orbital weather control platform. You ARE the weather now.', flavor:'God called. He wants his job back.' },
+];
+
+// ═══ EFFICIENCY UPGRADES (make clearing faster) ═══
+const EFFICIENCY_UPGRADES = [
+  { id:'eff_gloves', name:'Better Gloves', mult:1.15, cost:30, icon:'🧤',
+    desc:'+15% clearing speed. Your fingers will thank you.' },
+  { id:'eff_boots', name:'Snow Boots', mult:1.2, cost:80, icon:'🥾',
+    desc:'+20% movement speed. Grip matters.' },
+  { id:'eff_thermos', name:'Coffee Thermos', mult:1.15, cost:50, icon:'☕',
+    desc:'+15% everything. Caffeine is a performance enhancer.' },
+  { id:'eff_headlamp', name:'Headlamp', mult:1.1, cost:120, icon:'🔦',
+    desc:'+10% clearing speed. See what you\'re doing for once.' },
+  { id:'eff_salt', name:'Rock Salt Supply', mult:1.25, cost:250, icon:'🧂',
+    desc:'+25% clearing power. Pre-treat like a pro.' },
+  { id:'eff_heated', name:'Heated Gear', mult:1.2, cost:500, icon:'🔥',
+    desc:'+20% speed. Work longer, work faster. Never feel cold again.' },
+];
+
+// ═══ CLIENT/AREA DEFINITIONS ═══
+const AREAS = [
+  { id:'porch', name:'Mrs. Henderson\'s Porch', gridW:12, gridH:8, payPerUnit:0.50, unlockCost:0,
+    desc:'Your very first client. She pays per shovelful and bakes cookies.', snowDepthMax:1.0 },
+  { id:'sidewalk', name:'HOA Sidewalks', gridW:18, gridH:10, payPerUnit:0.75, unlockCost:100,
+    desc:'The HOA is very particular. Keep it CLEAR or lose the contract.', snowDepthMax:1.2 },
+  { id:'driveway', name:'Johnson Driveway', gridW:22, gridH:14, payPerUnit:1.00, unlockCost:300,
+    desc:'Two-car driveway. Must be clear by 7 AM or Mr. Johnson calls... the other guy.', snowDepthMax:1.5 },
+  { id:'parking', name:'FrostMart Parking Lot', gridW:30, gridH:18, payPerUnit:1.50, unlockCost:800,
+    desc:'60 spaces. Commercial contract. Big money, big area.', snowDepthMax:2.0 },
+  { id:'mainstreet', name:'Main Street', gridW:36, gridH:22, payPerUnit:2.00, unlockCost:2000,
+    desc:'City contract. The whole downtown strip. You\'ve made it... or have you?', snowDepthMax:2.5 },
+  { id:'highway', name:'Highway 1 On-Ramp', gridW:42, gridH:26, payPerUnit:3.00, unlockCost:5000,
+    desc:'State contract. This is the big leagues. Don\'t let cars pile up.', snowDepthMax:3.0 },
 ];
 
 // ═══ GAME STATE ═══
 const game = {
-  state:'menu', stage:0, money:0, totalEarned:0, upgrades:{},
-  unlockedStages:[0], // starts with porch unlocked
-  // Per-stage
-  snow:null, snowGridW:0, snowGridH:0, cellSize:0, offsetX:0, offsetY:0,
-  cleared:0, totalCells:0, stageTime:0, earningRate:0,
+  state: 'menu', // menu, playing, storm_report, shop, downtime
+  money: 0,
+  totalEarned: 0,
+  totalVolumeCleared: 0,
+  stormsCompleted: 0,
+
+  // Current area
+  areaIdx: 0,
+  unlockedAreas: [0],
+
+  // Snow grid
+  snow: null,
+  snowGridW: 0, snowGridH: 0,
+  cellSize: 0, offsetX: 0, offsetY: 0,
+  totalCells: 0,
+
   // Player
-  playerX:0, playerY:0, blowing:false,
-  // Plow
-  roads:[], plowX:0, plowY:0, plowTarget:null, plowSpeed:200,
-  // Management
-  districts:[], mgmtBudget:0, satisfaction:100,
-  // Input
-  mouseX:0, mouseY:0, mouseDown:false,
-  // Juice
-  screenShake:0,
-  tooltipTimer:0,
-  // Money tracking — passive income based on clearance
-  moneyThisSecond:0,
-  incomeAccum:0, // accumulates fractional $ between ticks
-  // Money pops
-  moneyPops:[],
+  playerX: 0, playerY: 0,
+  mouseX: 0, mouseY: 0, mouseDown: false,
+
+  // Tools
+  currentTool: 0, // index into TOOLS
+  ownedTools: [0], // indices
+
+  // Weather manipulation
+  ownedWeather: [], // ids of purchased weather upgrades
+  weatherPower: 0, // total snow boost from all weather upgrades
+
+  // Efficiency
+  ownedEfficiency: [], // ids
+  efficiencyMult: 1.0,
+
+  // Storm system
+  stormActive: false,
+  stormIntensity: 0, // 0-1, how hard it's snowing
+  stormTimer: 0, // seconds remaining in storm
+  stormDuration: 0, // total duration of this storm
+  downtimeTimer: 0, // seconds until next storm
+  downtimeDuration: 15, // planning time between storms
+  baseStormChance: 0.3, // base chance per cycle
+  stormWarningShown: false,
+
+  // Per-storm tracking
+  volumeThisStorm: 0,
+  moneyThisStorm: 0,
+  peakSnowDepth: 0,
+
+  // Visual juice
+  screenShake: 0,
+  tooltipTimer: 0,
+  moneyPops: [],
+  _shopCooldown: false,
 };
 
-function upLvl(id){return game.upgrades[id]||0}
-function upFx(id){return UPGRADES.find(u=>u.id===id).effect(upLvl(id))}
-function upCost(id){const u=UPGRADES.find(u2=>u2.id===id);return Math.floor(u.baseCost*Math.pow(1.8,upLvl(id)));}
+// ═══ HELPER FUNCTIONS ═══
+function currentTool() { return TOOLS[game.currentTool]; }
+function currentArea() { return AREAS[game.areaIdx]; }
+
+function calcWeatherPower() {
+  let boost = 0, chance = 0;
+  for (const id of game.ownedWeather) {
+    const w = WEATHER_UPGRADES.find(u => u.id === id);
+    if (w) { boost += w.snowBoost; chance += w.stormChance; }
+  }
+  game.weatherPower = boost;
+  game.baseStormChance = 0.3 + chance;
+}
+
+function calcEfficiency() {
+  let m = 1.0;
+  for (const id of game.ownedEfficiency) {
+    const e = EFFICIENCY_UPGRADES.find(u => u.id === id);
+    if (e) m *= e.mult;
+  }
+  game.efficiencyMult = m;
+}
 
 // ═══ INPUT ═══
 function getPos(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY}}
@@ -362,9 +472,9 @@ C.addEventListener('touchstart',e=>{e.preventDefault();initAudio();game.mouseDow
 window.addEventListener('touchend',()=>{game.mouseDown=false;});
 window.addEventListener('touchmove',e=>{if(game.state==='playing')e.preventDefault();if(e.touches&&e.touches.length){const p=getPos(e);game.mouseX=p.x;game.mouseY=p.y;}},{passive:false});
 
-// ═══ MONEY POPS (floating +$X text) ═══
+// ═══ MONEY POPS ═══
 function addMoneyPop(x, y, amount) {
-  game.moneyPops.push({x, y, amount, life:1.0, vy:-40});
+  game.moneyPops.push({x, y, amount, life:1.2, vy:-35});
 }
 function updateMoneyPops(dt) {
   for (let i=game.moneyPops.length-1;i>=0;i--) {
@@ -380,552 +490,645 @@ function drawMoneyPops() {
     ctx.fillStyle='#66ddaa';
     ctx.font='bold 13px -apple-system,sans-serif';
     ctx.textAlign='center';
-    ctx.fillText(`+$${p.amount}`,p.x,p.y);
+    ctx.fillText(`+$${p.amount.toFixed(2)}`,p.x,p.y);
     ctx.restore();
   }
 }
 
 function earnMoney(amount, x, y) {
-  const final = Math.ceil(amount);
-  game.money += final;
-  game.totalEarned += final;
-  game.moneyThisSecond += final;
-  if (x !== undefined) addMoneyPop(x, y, final);
+  game.money += amount;
+  game.totalEarned += amount;
+  game.moneyThisStorm += amount;
+  if (x !== undefined && amount >= 0.25) addMoneyPop(x, y, amount);
 }
 
-// Passive income: you get paid based on how clear your area is
-function tickPassiveIncome(dt) {
-  const s = STAGES[game.stage];
-  // Income = payRate × clearance% × income upgrade multiplier
-  const incomePerSec = s.payRate * game.cleared * upFx('income');
-  game.incomeAccum += incomePerSec * dt;
-  // Pay out whole dollars
-  if (game.incomeAccum >= 1) {
-    const payout = Math.floor(game.incomeAccum);
-    game.incomeAccum -= payout;
-    game.money += payout;
-    game.totalEarned += payout;
-    game.moneyThisSecond += payout;
+// ═══ AREA INITIALIZATION ═══
+function initArea(idx) {
+  const a = AREAS[idx];
+  game.areaIdx = idx;
+  game.snowGridW = a.gridW;
+  game.snowGridH = a.gridH;
+  const padX = 40, padY = 80;
+  game.cellSize = Math.min((W - padX*2) / a.gridW, (H - padY*2) / a.gridH);
+  game.offsetX = (W - a.gridW * game.cellSize) / 2;
+  game.offsetY = (H - a.gridH * game.cellSize) / 2 + 20;
+  game.snow = [];
+  for (let y = 0; y < a.gridH; y++) {
+    game.snow[y] = [];
+    for (let x = 0; x < a.gridW; x++) game.snow[y][x] = 0;
   }
+  game.totalCells = a.gridW * a.gridH;
+  game.playerX = W / 2;
+  game.playerY = H / 2;
+
+  document.getElementById('hudArea').textContent = a.name;
+  document.getElementById('hudTool').textContent = currentTool().name;
 }
 
+// ═══ STORM SYSTEM ═══
+// Storms build up, snow falls, you clear it and get paid by volume.
+// Between storms = downtime for shopping/planning.
 
-// ═══ STAGE INITIALIZATION ═══
-function initStage(idx) {
-  const s = STAGES[idx];
-  game.stage = idx;
-  game.stageTime = 0; game.cleared = 0;
-  game.screenShake = 0; game.incomeAccum = 0;
-  game.moneyPops = [];
-  particles.length = 0;
-
-  if (s.mode === 'direct') {
-    const gw=s.gridW, gh=s.gridH;
-    game.snowGridW=gw; game.snowGridH=gh;
-    const padX=40, padY=80;
-    game.cellSize=Math.min((W-padX*2)/gw,(H-padY*2)/gh);
-    game.offsetX=(W-gw*game.cellSize)/2;
-    game.offsetY=(H-gh*game.cellSize)/2+20;
-    game.snow=[];
-    for(let y=0;y<gh;y++){game.snow[y]=[];for(let x=0;x<gw;x++)game.snow[y][x]=0.6+Math.random()*0.4;}
-    game.totalCells=gw*gh;
-    game.playerX=W/2; game.playerY=H/2;
-  } else if (s.mode === 'plow') {
-    initPlowStage(s);
-  } else if (s.mode === 'manage' || s.mode === 'logistics') {
-    initManageStage(s);
-  }
-
-  document.getElementById('gameHUD').style.display='flex';
-  document.getElementById('hudStage').textContent=s.name;
-  document.getElementById('hudTool').textContent=s.tool;
-  document.getElementById('hudCrewItem').style.display=(s.mode==='manage'||s.mode==='logistics')?'flex':'none';
-  document.getElementById('hudSatItem').style.display=(s.mode==='manage'||s.mode==='logistics')?'flex':'none';
-  document.getElementById('mgmtPanel').style.display=(s.mode==='manage'||s.mode==='logistics')?'block':'none';
-  showTooltip(s.desc, 4);
+function startStorm() {
+  game.stormActive = true;
+  // Duration: 20-45 seconds, modified by weather power (more power = longer storms = more money potential)
+  const baseDur = 20 + Math.random() * 15;
+  game.stormDuration = baseDur * (1 + game.weatherPower * 0.5);
+  game.stormTimer = game.stormDuration;
+  // Intensity: 0.3-0.8 base, boosted by weather manipulation
+  game.stormIntensity = (0.3 + Math.random() * 0.5) * (1 + game.weatherPower);
+  game.stormIntensity = Math.min(game.stormIntensity, 1.5); // cap at 1.5x
+  game.volumeThisStorm = 0;
+  game.moneyThisStorm = 0;
+  game.peakSnowDepth = 0;
+  game.stormWarningShown = false;
+  playSound('storm', 0.4);
+  showTooltip('⛈️ Storm rolling in! Get clearing!', 3);
+  // Flash storm warning
+  const warn = document.getElementById('stormWarning');
+  warn.style.opacity = '1';
+  setTimeout(() => { warn.style.opacity = '0'; }, 2000);
 }
 
-// ═══ PLOW STAGE ═══
-function initPlowStage(s) {
-  game.roads=[];
-  const margin=80, areaW=W-margin*2, areaH=H-margin*2-60;
-  const hCount=Math.floor(s.roadCount*0.5), vCount=s.roadCount-hCount;
-  for(let i=0;i<hCount;i++){const y=margin+60+(i+1)*areaH/(hCount+1);
-    game.roads.push({x1:margin,y1:y,x2:margin+areaW,y2:y,snow:0.7+Math.random()*0.3,width:18});}
-  for(let i=0;i<vCount;i++){const x=margin+(i+1)*areaW/(vCount+1);
-    game.roads.push({x1:x,y1:margin+60,x2:x,y2:margin+60+areaH,snow:0.7+Math.random()*0.3,width:18});}
-  game.totalCells=game.roads.length;
-  game.plowX=game.roads[0].x1;game.plowY=game.roads[0].y1;game.plowTarget=null;
+function endStorm() {
+  game.stormActive = false;
+  game.stormTimer = 0;
+  game.stormsCompleted++;
+
+  // Show storm report
+  game.state = 'storm_report';
+  document.getElementById('gameHUD').style.display = 'none';
+
+  const sr = document.getElementById('stormReport');
+  sr.style.display = 'flex';
+
+  document.getElementById('srTitle').textContent = '⛈️ Storm #' + game.stormsCompleted + ' Complete!';
+
+  const stats = document.getElementById('srStats');
+  stats.innerHTML = `
+    <div>📦 Volume Cleared: <span>${game.volumeThisStorm.toFixed(0)} units</span></div>
+    <div>💰 Earned: <span>$${game.moneyThisStorm.toFixed(2)}</span></div>
+    <div>🌨️ Peak Depth: <span>${(game.peakSnowDepth*100).toFixed(0)}%</span></div>
+    <div>💵 Rate: <span>$${currentArea().payPerUnit.toFixed(2)}/unit</span></div>
+  `;
+
+  // Generate flavor message
+  let msg = '';
+  if (game.moneyThisStorm > 100) msg = 'Incredible haul! Your bank account is looking healthy. Maybe time for a bigger tool... or a bigger storm? 😈';
+  else if (game.moneyThisStorm > 50) msg = 'Solid work! The snow keeps paying. Keep investing in weather manipulation to grow your empire.';
+  else if (game.moneyThisStorm > 20) msg = 'Not bad for an honest day\'s work. Well... "honest."';
+  else if (game.moneyThisStorm > 5) msg = 'Humble earnings. You need more snow to make more money. Time to visit the Business HQ.';
+  else msg = 'Barely enough for coffee. You need to make it snow harder. Check out Weather Manipulation in the shop!';
+
+  document.getElementById('srMessage').textContent = msg;
+
+  playSound('complete', 0.4);
+  for (let j = 0; j < 20; j++) emitSparkle(W/2 + (Math.random()-0.5)*200, H/2 + (Math.random()-0.5)*100, 3);
 }
 
-function updatePlow(dt, s) {
-  const snowMult = upFx('antisnow');
-  for(const r of game.roads) r.snow=Math.min(1,r.snow+s.snowRate*snowMult*dt*0.02*(0.5+Math.random()));
+function startDowntime() {
+  game.state = 'playing';
+  game.stormActive = false;
+  // Downtime gets shorter as you get more weather power (storms come faster)
+  game.downtimeDuration = Math.max(5, 15 - game.weatherPower * 8);
+  game.downtimeTimer = game.downtimeDuration;
+  document.getElementById('gameHUD').style.display = 'flex';
+  showTooltip('☀️ Calm weather. Plan & upgrade before the next storm!', 3);
+}
 
-  if(game.mouseDown){
-    let bestD=Infinity,bestR=null;
-    for(const r of game.roads){
-      const dx=r.x2-r.x1,dy=r.y2-r.y1,len=Math.sqrt(dx*dx+dy*dy);
-      const t=Math.max(0,Math.min(1,((game.mouseX-r.x1)*dx+(game.mouseY-r.y1)*dy)/(len*len)));
-      const px=r.x1+t*dx,py=r.y1+t*dy,dist=Math.sqrt((game.mouseX-px)**2+(game.mouseY-py)**2);
-      if(dist<bestD&&dist<50){bestD=dist;bestR=r;}
-    }
-    if(bestR){game.plowTarget=bestR;playSound('click',0.1);}
-  }
+// ═══ SNOW ACCUMULATION (during storms) ═══
+function accumulateSnow(dt) {
+  if (!game.stormActive) return;
+  const area = currentArea();
+  const snow = game.snow;
+  const rate = game.stormIntensity * 0.4; // base snow rate
 
-  if(game.plowTarget){
-    const r=game.plowTarget, mx=(r.x1+r.x2)/2,my=(r.y1+r.y2)/2;
-    const dx=mx-game.plowX,dy=my-game.plowY,dist=Math.sqrt(dx*dx+dy*dy);
-    const spd=game.plowSpeed*upFx('speed');
-    if(dist<spd*dt){
-      if(r.snow>0.1){
-        r.snow=Math.max(0,r.snow-0.6*upFx('power'));
-        if(r.snow<0.15)r.snow=0;
-        emitSnow(game.plowX,game.plowY,Math.atan2(dy,dx),15,80);
-        playSound('blow',0.2);game.screenShake=3;
+  for (let gy = 0; gy < game.snowGridH; gy++) {
+    for (let gx = 0; gx < game.snowGridW; gx++) {
+      if (Math.random() < rate * dt * 1.5) {
+        const add = (0.01 + Math.random() * 0.015) * game.stormIntensity;
+        snow[gy][gx] = Math.min(area.snowDepthMax, snow[gy][gx] + add);
       }
-      game.plowX=mx;game.plowY=my;game.plowTarget=null;
-    } else {
-      game.plowX+=(dx/dist)*spd*dt;game.plowY+=(dy/dist)*spd*dt;
-      for(const road of game.roads){
-        const rdx=road.x2-road.x1,rdy=road.y2-road.y1,len=Math.sqrt(rdx*rdx+rdy*rdy);
-        const t=Math.max(0,Math.min(1,((game.plowX-road.x1)*rdx+(game.plowY-road.y1)*rdy)/(len*len)));
-        const px=road.x1+t*rdx,py=road.y1+t*rdy;
-        if(Math.sqrt((game.plowX-px)**2+(game.plowY-py)**2)<25){
-          const amt=1.5*upFx('power')*dt;
-          if(road.snow>0){
-            const b=road.snow;road.snow=Math.max(0,road.snow-amt);
-            // No per-clear income — passive income from clearance %
-            if(Math.random()<0.2)emitSnow(game.plowX,game.plowY,Math.atan2(game.plowY-py,game.plowX-px),3,50);
+    }
+  }
+
+  // Track peak depth
+  let maxDepth = 0;
+  for (let gy = 0; gy < game.snowGridH; gy++)
+    for (let gx = 0; gx < game.snowGridW; gx++)
+      if (snow[gy][gx] > maxDepth) maxDepth = snow[gy][gx];
+  game.peakSnowDepth = Math.max(game.peakSnowDepth, maxDepth / area.snowDepthMax);
+}
+
+// ═══ SNOW CLEARING (player action) ═══
+function updateClearing(dt) {
+  const snow = game.snow, cs = game.cellSize;
+  const ox = game.offsetX, oy = game.offsetY;
+  const tool = currentTool();
+  const area = currentArea();
+
+  // Player follows mouse
+  const spd = 300 * tool.speed * game.efficiencyMult;
+  const dx = game.mouseX - game.playerX, dy = game.mouseY - game.playerY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist > 5) {
+    const m = Math.min(dist, spd * dt);
+    game.playerX += (dx/dist) * m;
+    game.playerY += (dy/dist) * m;
+  }
+
+  // Blow/clear snow when mouse is down
+  if (game.mouseDown) {
+    const radius = (tool.radius * game.efficiencyMult) * cs;
+    const power = tool.power * game.efficiencyMult * 2.0;
+    const px = game.playerX, py = game.playerY;
+    let volumeCleared = 0;
+
+    for (let gy = 0; gy < game.snowGridH; gy++) {
+      for (let gx = 0; gx < game.snowGridW; gx++) {
+        if (snow[gy][gx] <= 0) continue;
+        const cx = ox + gx*cs + cs/2, cy = oy + gy*cs + cs/2;
+        const d = Math.sqrt((cx-px)**2 + (cy-py)**2);
+        if (d < radius) {
+          const falloff = 1 - d/radius;
+          const clearAmt = power * falloff * dt;
+          const before = snow[gy][gx];
+          snow[gy][gx] = Math.max(0, snow[gy][gx] - clearAmt);
+          const cleared = before - snow[gy][gx];
+          if (cleared > 0.001) {
+            volumeCleared += cleared;
+            if (Math.random() < 0.08)
+              emitSnow(cx, cy, Math.atan2(cy-py, cx-px), 2, 40 + power*12);
+          }
+          if (before > 0 && snow[gy][gx] <= 0) {
+            emitSparkle(cx, cy, 3);
           }
         }
       }
     }
-  }
 
-  let totalSnow=0;for(const r of game.roads)totalSnow+=r.snow;
-  game.cleared=1-totalSnow/game.roads.length;
-}
-
-function drawPlow() {
-  for(const r of game.roads){
-    ctx.strokeStyle='#2a3040';ctx.lineWidth=r.width+4;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(r.x1,r.y1);ctx.lineTo(r.x2,r.y2);ctx.stroke();
-    ctx.strokeStyle='#3a4050';ctx.lineWidth=r.width;
-    ctx.beginPath();ctx.moveTo(r.x1,r.y1);ctx.lineTo(r.x2,r.y2);ctx.stroke();
-    if(r.snow>0.01){ctx.strokeStyle=`rgba(210,225,240,${r.snow*0.7})`;ctx.lineWidth=r.width*r.snow;
-      ctx.beginPath();ctx.moveTo(r.x1,r.y1);ctx.lineTo(r.x2,r.y2);ctx.stroke();}
-    if(r.snow<0.1){ctx.strokeStyle='rgba(100,220,180,0.12)';ctx.lineWidth=r.width+8;
-      ctx.beginPath();ctx.moveTo(r.x1,r.y1);ctx.lineTo(r.x2,r.y2);ctx.stroke();}
-  }
-  ctx.save();ctx.translate(game.plowX,game.plowY);
-  ctx.fillStyle='rgba(255,220,100,0.12)';ctx.beginPath();ctx.arc(0,-5,25,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#d4a020';ctx.fillRect(-10,-8,20,16);
-  ctx.fillStyle='#b08818';ctx.fillRect(-12,-4,4,8);
-  ctx.fillStyle='#888';ctx.fillRect(-14,-10,3,20);
-  ctx.restore();
-  if(game.plowTarget){
-    const r=game.plowTarget,mx=(r.x1+r.x2)/2,my=(r.y1+r.y2)/2;
-    ctx.strokeStyle='rgba(100,220,180,0.4)';ctx.lineWidth=2;ctx.setLineDash([5,5]);
-    ctx.beginPath();ctx.moveTo(game.plowX,game.plowY);ctx.lineTo(mx,my);ctx.stroke();ctx.setLineDash([]);
-  }
-}
-
-// ═══ MANAGEMENT STAGE ═══
-function initManageStage(s) {
-  game.districts=[];game.mgmtBudget=500+game.stage*200;game.satisfaction=100;
-  const count=s.districts||s.cities||4;
-  const cols=Math.ceil(Math.sqrt(count)),rows=Math.ceil(count/cols);
-  const margin=80,gapX=(W-margin*2)/cols,gapY=(H-margin*2-100)/rows;
-  const names=['Downtown','Northside','Harbor','Westend','Old Town','Industrial','Frostheim','Glacierton','Snowhaven','Iceport'];
-  const colors=['#3366aa','#aa3366','#33aa66','#aa6633','#6633aa','#33aaaa','#4488cc','#cc4488'];
-  for(let i=0;i<count;i++){
-    const col=i%cols,row=Math.floor(i/cols);
-    game.districts.push({
-      name:names[i]||`Sector ${i+1}`,
-      x:margin+col*gapX+gapX/2, y:margin+60+row*gapY+gapY/2,
-      w:gapX*0.85, h:gapY*0.85,
-      snow:0.5+Math.random()*0.5, crew:0,
-      color:colors[i%colors.length], satisfaction:100,
-      population:1000+Math.floor(Math.random()*4000)
-    });
-  }
-  game.totalCells=count;
-  buildMgmtUI();
-}
-
-function buildMgmtUI() {
-  const grid=document.getElementById('mgmtGrid');grid.innerHTML='';
-  const maxCrews=1+upFx('crews');
-  document.getElementById('mgmtTitle').textContent=STAGES[game.stage].mode==='logistics'?'Regional Command':'District Management';
-  for(let i=0;i<game.districts.length;i++){
-    const d=game.districts[i],btn=document.createElement('div');
-    btn.className='district-btn panel';btn.style.borderColor=d.color+'60';
-    btn.innerHTML=`<b>${d.name}</b><br><span style="font-size:10px">Snow: ${Math.round(d.snow*100)}%</span>`;
-    btn.onclick=()=>{
-      const used=game.districts.reduce((s2,d2)=>s2+d2.crew,0);
-      if(d.crew>0){d.crew=0;playSound('click',0.2);}
-      else if(used<maxCrews){d.crew=1;playSound('upgrade',0.2);}
-      buildMgmtUI();
-    };
-    if(d.crew>0){btn.classList.add('assigned');btn.style.borderColor='#66ddaa80';}
-    grid.appendChild(btn);
-  }
-  document.getElementById('mgmtBudget').textContent='$'+game.mgmtBudget;
-  document.getElementById('hudCrews').textContent=game.districts.reduce((s2,d2)=>s2+d2.crew,0)+'/'+maxCrews;
-}
-
-function updateManage(dt, s) {
-  let totalSnow=0,totalSat=0;
-  const snowMult=upFx('antisnow');
-  for(const d of game.districts){
-    d.snow=Math.min(1,d.snow+s.snowRate*snowMult*dt*0.015*(0.5+Math.random()*0.5));
-    if(d.crew>0){
-      const rate=0.15*d.crew*upFx('power')*dt;
-      d.snow=Math.max(0,d.snow-rate);
-    }
-    if(d.snow>0.7)d.satisfaction=Math.max(0,d.satisfaction-8*dt);
-    else if(d.snow<0.3)d.satisfaction=Math.min(100,d.satisfaction+3*dt);
-    totalSnow+=d.snow;totalSat+=d.satisfaction;
-  }
-  game.cleared=1-totalSnow/game.districts.length;
-  game.satisfaction=totalSat/game.districts.length;
-  document.getElementById('hudSat').textContent=Math.round(game.satisfaction)+'%';
-  if(Math.floor(game.stageTime*2)!==Math.floor((game.stageTime-dt)*2))buildMgmtUI();
-}
-
-function drawManage() {
-  for(const d of game.districts){
-    const rx=d.x-d.w/2,ry=d.y-d.h/2;
-    ctx.fillStyle=d.color+'20';ctx.strokeStyle=d.crew>0?'#66ddaa60':d.color+'40';ctx.lineWidth=2;
-    ctx.beginPath();ctx.roundRect(rx,ry,d.w,d.h,8);ctx.fill();ctx.stroke();
-    ctx.fillStyle=`rgba(210,225,240,${d.snow*0.5})`;
-    ctx.beginPath();ctx.roundRect(rx,ry,d.w,d.h,8);ctx.fill();
-    ctx.fillStyle='#c0daf0';ctx.font='bold 13px -apple-system,sans-serif';ctx.textAlign='center';
-    ctx.fillText(d.name,d.x,d.y-8);
-    ctx.fillStyle=d.snow>0.6?'#ff8888':d.snow>0.3?'#ffcc66':'#66ddaa';
-    ctx.font='11px -apple-system,sans-serif';
-    ctx.fillText(`Snow: ${Math.round(d.snow*100)}%`,d.x,d.y+8);
-    if(d.crew>0){ctx.fillStyle='#66ddaa';ctx.font='16px sans-serif';ctx.fillText('👷',d.x,d.y+28);}
-    const barW=d.w*0.6,barH=4,barX=d.x-barW/2,barY=d.y+d.h/2-16;
-    ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(barX,barY,barW,barH);
-    ctx.fillStyle=d.satisfaction>70?'#66ddaa':d.satisfaction>40?'#ffcc66':'#ff6666';
-    ctx.fillRect(barX,barY,barW*d.satisfaction/100,barH);
-  }
-}
-
-
-// ═══ DIRECT CLEARING MODE ═══
-function updateDirect(dt, stage) {
-  const snow = game.snow, cs = game.cellSize;
-  const ox = game.offsetX, oy = game.offsetY;
-  const snowMult = upFx('antisnow');
-
-  // Snow accumulation — always happening
-  for (let gy=0;gy<game.snowGridH;gy++)
-    for (let gx=0;gx<game.snowGridW;gx++)
-      if (snow[gy][gx]<1 && Math.random()<stage.snowRate*snowMult*dt*0.3)
-        snow[gy][gx]=Math.min(1,snow[gy][gx]+0.015+Math.random()*0.01);
-
-  // Player follows mouse
-  const spd=350*upFx('speed');
-  const dx=game.mouseX-game.playerX,dy=game.mouseY-game.playerY;
-  const dist=Math.sqrt(dx*dx+dy*dy);
-  if(dist>5){const m=Math.min(dist,spd*dt);game.playerX+=(dx/dist)*m;game.playerY+=(dy/dist)*m;}
-
-  // Blow snow
-  if (game.mouseDown) {
-    const radius=(2.0+upFx('radius')*0.6)*cs;
-    const power=2.5*upFx('power');
-    const px=game.playerX, py=game.playerY;
-    let clearedAny=false;
-
-    for(let gy=0;gy<game.snowGridH;gy++){
-      for(let gx=0;gx<game.snowGridW;gx++){
-        if(snow[gy][gx]<=0)continue;
-        const cx=ox+gx*cs+cs/2, cy=oy+gy*cs+cs/2;
-        const d=Math.sqrt((cx-px)**2+(cy-py)**2);
-        if(d<radius){
-          const falloff=1-d/radius;
-          const clearAmt=power*falloff*dt;
-          const before=snow[gy][gx];
-          snow[gy][gx]=Math.max(0,snow[gy][gx]-clearAmt);
-          if(before-snow[gy][gx]>0.01&&Math.random()<0.1)
-            emitSnow(cx,cy,Math.atan2(cy-py,cx-px),2,40+power*15);
-          if(before>0&&snow[gy][gx]<=0){emitSparkle(cx,cy,4);clearedAny=true;}
-        }
-      }
+    if (volumeCleared > 0) {
+      // PAY BY VOLUME — the core mechanic
+      const payment = volumeCleared * area.payPerUnit * 10; // scale factor
+      earnMoney(payment, game.playerX, game.playerY - 20);
+      game.volumeThisStorm += volumeCleared * 10;
+      game.totalVolumeCleared += volumeCleared * 10;
     }
 
-    if(Math.random()<0.3)playSound('blow',0.06);
-    if(clearedAny)game.screenShake=Math.min(4,game.screenShake+1);
+    if (Math.random() < 0.3) playSound('blow', 0.06);
+    if (volumeCleared > 0.1) game.screenShake = Math.min(3, game.screenShake + 0.5);
   }
 
-  let totalSnow=0;
-  for(let gy=0;gy<game.snowGridH;gy++)
-    for(let gx=0;gx<game.snowGridW;gx++)totalSnow+=snow[gy][gx];
-  game.cleared=1-totalSnow/game.totalCells;
+  // Calculate clearance percentage
+  let totalSnow = 0;
+  for (let gy = 0; gy < game.snowGridH; gy++)
+    for (let gx = 0; gx < game.snowGridW; gx++)
+      totalSnow += snow[gy][gx];
+  const maxPossibleSnow = game.totalCells * currentArea().snowDepthMax;
+  game.cleared = maxPossibleSnow > 0 ? 1 - (totalSnow / maxPossibleSnow) : 1;
 }
 
-function drawDirect() {
-  const snow=game.snow,cs=game.cellSize,ox=game.offsetX,oy=game.offsetY;
+// ═══ DRAW SNOW GRID ═══
+function drawSnowGrid() {
+  const snow = game.snow, cs = game.cellSize, ox = game.offsetX, oy = game.offsetY;
+  const area = currentArea();
 
   // Ground
-  ctx.fillStyle='#1a2030';
-  ctx.beginPath();ctx.roundRect(ox-4,oy-4,game.snowGridW*cs+8,game.snowGridH*cs+8,6);ctx.fill();
-  ctx.fillStyle='#1e2438';
-  ctx.beginPath();ctx.roundRect(ox,oy,game.snowGridW*cs,game.snowGridH*cs,4);ctx.fill();
+  ctx.fillStyle = '#1a2030';
+  ctx.beginPath(); ctx.roundRect(ox-4, oy-4, game.snowGridW*cs+8, game.snowGridH*cs+8, 6); ctx.fill();
+  ctx.fillStyle = '#1e2438';
+  ctx.beginPath(); ctx.roundRect(ox, oy, game.snowGridW*cs, game.snowGridH*cs, 4); ctx.fill();
 
-  // Snow cells
-  for(let gy=0;gy<game.snowGridH;gy++){
-    for(let gx=0;gx<game.snowGridW;gx++){
-      const s=snow[gy][gx];
-      if(s>0.01){
-        const x=ox+gx*cs,y=oy+gy*cs;
-        const b=180+s*60,bl=220+s*35;
-        ctx.fillStyle=`rgba(${b},${b+10},${Math.min(255,bl)},${0.3+s*0.65})`;
-        ctx.fillRect(x,y,cs,cs);
-        if(s>0.5&&cs>8){ctx.fillStyle=`rgba(255,255,255,${s*0.2})`;
-          const h=(gx*7+gy*13)%5;ctx.fillRect(x+h,y+(h+2)%cs,2,2);}
+  // Snow cells — brightness/opacity scales with depth
+  for (let gy = 0; gy < game.snowGridH; gy++) {
+    for (let gx = 0; gx < game.snowGridW; gx++) {
+      const s = snow[gy][gx];
+      if (s > 0.01) {
+        const x = ox + gx*cs, y = oy + gy*cs;
+        const depth = s / area.snowDepthMax; // 0-1 normalized depth
+        const b = 180 + depth*60, bl = 220 + depth*35;
+        ctx.fillStyle = `rgba(${b},${b+10},${Math.min(255,bl)},${0.3 + depth*0.65})`;
+        ctx.fillRect(x, y, cs, cs);
+        // Snow texture for deep snow
+        if (depth > 0.5 && cs > 8) {
+          ctx.fillStyle = `rgba(255,255,255,${depth*0.25})`;
+          const h = (gx*7+gy*13) % 5;
+          ctx.fillRect(x+h, y+(h+2)%cs, 2, 2);
+        }
+        // Danger tint for very deep snow
+        if (depth > 0.8) {
+          ctx.fillStyle = `rgba(255,100,100,${(depth-0.8)*0.3})`;
+          ctx.fillRect(x, y, cs, cs);
+        }
       } else {
-        ctx.fillStyle='rgba(100,220,180,0.04)';
-        ctx.fillRect(ox+gx*cs,oy+gy*cs,cs,cs);
+        ctx.fillStyle = 'rgba(100,220,180,0.04)';
+        ctx.fillRect(ox+gx*cs, oy+gy*cs, cs, cs);
       }
     }
   }
 
   // Border
-  ctx.strokeStyle='rgba(100,180,255,0.15)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.roundRect(ox-4,oy-4,game.snowGridW*cs+8,game.snowGridH*cs+8,6);ctx.stroke();
-
-  // Player
-  const px=game.playerX,py=game.playerY;
-  if(game.mouseDown){
-    const radius=(2.0+upFx('radius')*0.6)*cs;
-    ctx.strokeStyle='rgba(100,180,255,0.2)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
-    ctx.beginPath();ctx.arc(px,py,radius,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-    const grad=ctx.createRadialGradient(px,py,0,px,py,radius);
-    grad.addColorStop(0,'rgba(100,180,255,0.1)');grad.addColorStop(1,'rgba(100,180,255,0)');
-    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(px,py,radius,0,Math.PI*2);ctx.fill();
-  }
-  // Character
-  ctx.fillStyle='#ff6644';ctx.beginPath();ctx.arc(px,py-6,6,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#cc4422';ctx.fillRect(px-4,py,8,10);
-  ctx.strokeStyle='#888';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px+4,py+2);
-  const ba=Math.atan2(game.mouseY-py,game.mouseX-px);
-  ctx.lineTo(px+4+Math.cos(ba)*14,py+2+Math.sin(ba)*14);ctx.stroke();
-
-
+  ctx.strokeStyle = 'rgba(100,180,255,0.15)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(ox-4, oy-4, game.snowGridW*cs+8, game.snowGridH*cs+8, 6); ctx.stroke();
 }
 
+// ═══ DRAW PLAYER ═══
+function drawPlayer() {
+  const px = game.playerX, py = game.playerY;
+  const tool = currentTool();
+  const cs = game.cellSize;
+
+  if (game.mouseDown) {
+    const radius = (tool.radius * game.efficiencyMult) * cs;
+    ctx.strokeStyle = 'rgba(100,180,255,0.2)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    const grad = ctx.createRadialGradient(px, py, 0, px, py, radius);
+    grad.addColorStop(0, 'rgba(100,180,255,0.1)'); grad.addColorStop(1, 'rgba(100,180,255,0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Character
+  ctx.fillStyle = '#ff6644'; ctx.beginPath(); ctx.arc(px, py-6, 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#cc4422'; ctx.fillRect(px-4, py, 8, 10);
+  // Tool in hand
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px+4, py+2);
+  const ba = Math.atan2(game.mouseY - py, game.mouseX - px);
+  ctx.lineTo(px+4+Math.cos(ba)*14, py+2+Math.sin(ba)*14); ctx.stroke();
+  // Tool icon above head
+  ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(tool.icon, px, py - 18);
+}
 
 // ═══ TOOLTIP ═══
 function showTooltip(text, dur=3) {
-  game.tooltipTimer=dur;
-  const el=document.getElementById('tooltip');el.textContent=text;el.style.opacity='1';
+  game.tooltipTimer = dur;
+  const el = document.getElementById('tooltip');
+  el.textContent = text; el.style.opacity = '1';
 }
 
-// ═══ HUD ═══
+// ═══ HUD UPDATE ═══
 function updateHUD() {
-  document.getElementById('hudMoney').textContent='$'+game.money;
-  document.getElementById('hudPercent').textContent=Math.round(game.cleared*100)+'%';
-  document.getElementById('progressFill').style.width=(game.cleared*100)+'%';
+  document.getElementById('hudMoney').textContent = '$' + game.money.toFixed(2);
+  document.getElementById('hudPercent').textContent = Math.round(game.cleared * 100) + '%';
+  document.getElementById('progressFill').style.width = (game.cleared * 100) + '%';
 
-  // Show current income rate based on clearance
-  const s=STAGES[game.stage];
-  const currentRate=Math.floor(s.payRate*game.cleared*upFx('income'));
-  const maxRate=Math.floor(s.payRate*upFx('income'));
-  document.getElementById('hudRate').textContent='$'+currentRate+'/s (max $'+maxRate+')';
+  // Storm bar
+  if (game.stormActive) {
+    const pct = (game.stormTimer / game.stormDuration) * 100;
+    document.getElementById('stormFill').style.width = pct + '%';
+    document.getElementById('hudStorm').textContent = 'Active (' + Math.ceil(game.stormTimer) + 's)';
+    document.getElementById('hudStorm').style.color = '#aa88ff';
+  } else {
+    const pct = game.downtimeTimer > 0 ? ((game.downtimeDuration - game.downtimeTimer) / game.downtimeDuration) * 100 : 0;
+    document.getElementById('stormFill').style.width = pct + '%';
+    document.getElementById('hudStorm').textContent = game.downtimeTimer > 0 ?
+      'Next in ' + Math.ceil(game.downtimeTimer) + 's' : 'Calm';
+    document.getElementById('hudStorm').style.color = '#6090b0';
+  }
+
+  document.getElementById('hudVolume').textContent = game.totalVolumeCleared.toFixed(0);
+  document.getElementById('hudRate').textContent = '$' + currentArea().payPerUnit.toFixed(2) + '/unit';
 }
 
 // ═══ SHOP / BUSINESS HQ ═══
 function showShop() {
-  game.state='shop';
-  document.getElementById('shopScreen').style.display='flex';
-  document.getElementById('gameHUD').style.display='none';
-  document.getElementById('mgmtPanel').style.display='none';
-  document.getElementById('shopMoneyVal').textContent='$'+game.money;
+  game.state = 'shop';
+  document.getElementById('shopScreen').style.display = 'flex';
+  document.getElementById('gameHUD').style.display = 'none';
+  document.getElementById('shopMoneyVal').textContent = '$' + game.money.toFixed(2);
 
-  const container=document.getElementById('shopSections');
-  container.innerHTML='';
-
-  // === CONTRACTS SECTION ===
-  const contractSec=document.createElement('div');
-  contractSec.className='shop-section';
-  contractSec.innerHTML='<h3>📋 Available Contracts</h3>';
-  const contractGrid=document.createElement('div');
-  contractGrid.className='shop-grid';
-
-  for(let i=0;i<STAGES.length;i++){
-    const s=STAGES[i];
-    const unlocked=game.unlockedStages.includes(i);
-    const current=game.stage===i;
-    const canAfford=game.money>=s.unlockCost;
-    // Can only unlock next sequential stage
-    const isNext=i===Math.max(...game.unlockedStages)+1;
-    const available=!unlocked&&isNext;
-
-    const item=document.createElement('div');
-    item.className='shop-item panel'+(unlocked?' owned':(!available?' locked':''));
-
-    let priceHTML='';
-    if(current) priceHTML='<div class="price">📍 CURRENT</div>';
-    else if(unlocked) priceHTML='<div class="price" style="color:#80a0c0">✅ Unlocked</div>';
-    else if(available) priceHTML=`<div class="price gold">${canAfford?'':'🔒 '}$${s.unlockCost}</div>`;
-    else priceHTML='<div class="price" style="color:#405060">🔒 Complete previous first</div>';
-
-    item.innerHTML=`<h4>${s.mode==='plow'?'🚛':s.mode==='manage'?'🏙️':s.mode==='logistics'?'🌐':'🌬️'} ${s.name}</h4>
-      <p>${s.desc}</p><p style="color:#4a6a8a;font-size:9px">Pays up to $${s.payRate}/sec when clear</p>${priceHTML}`;
-
-    if(unlocked&&!current){
-      item.style.cursor='pointer';item.style.opacity='0.8';
-      item.querySelector('.price').innerHTML='<span style="color:#66ddaa">▶ Switch here</span>';
-      item.onclick=()=>{
-        document.getElementById('shopScreen').style.display='none';
-        game.state='playing';initStage(i);playSound('click',0.3);
-      };
-    } else if(available&&canAfford){
-      item.onclick=()=>{
-        game.money-=s.unlockCost;game.unlockedStages.push(i);
-        playSound('complete',0.4);
-        // Show contract accepted screen
-        document.getElementById('shopScreen').style.display='none';
-        document.getElementById('stageComplete').style.display='flex';
-        document.getElementById('scTitle').textContent='📋 New Contract: '+s.name;
-        document.getElementById('scDesc').textContent=s.desc;
-        game.state='stageComplete';
-        for(let j=0;j<30;j++)emitSparkle(W/2+(Math.random()-0.5)*200,H/2+(Math.random()-0.5)*100,3);
-      };
-    }
-    contractGrid.appendChild(item);
+  // Build tabs
+  const tabBar = document.getElementById('shopTabs');
+  tabBar.innerHTML = '';
+  const tabs = [
+    { id:'tools', label:'🔧 Tools', icon:'🔧' },
+    { id:'weather', label:'🌨️ Weather Manipulation', icon:'🌨️' },
+    { id:'efficiency', label:'⚡ Efficiency', icon:'⚡' },
+    { id:'areas', label:'📍 Clients', icon:'📍' },
+  ];
+  let activeTab = game._shopTab || 'tools';
+  for (const tab of tabs) {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (activeTab === tab.id ? ' active' : '');
+    btn.textContent = tab.label;
+    btn.onclick = () => { game._shopTab = tab.id; showShop(); playSound('click', 0.1); };
+    tabBar.appendChild(btn);
   }
-  contractSec.appendChild(contractGrid);
-  container.appendChild(contractSec);
 
-  // === UPGRADES SECTION ===
-  const upgSec=document.createElement('div');
-  upgSec.className='shop-section';upgSec.style.marginTop='16px';
-  upgSec.innerHTML='<h3>🔧 Upgrades</h3>';
-  const upgGrid=document.createElement('div');
-  upgGrid.className='shop-grid';
+  const container = document.getElementById('shopSections');
+  container.innerHTML = '';
 
-  for(const u of UPGRADES){
-    const lvl=upLvl(u.id),maxed=lvl>=u.maxLvl,cost=upCost(u.id);
-    const canAfford=game.money>=cost;
-    // Show crews only if management stages are unlocked
-    if(u.id==='crews'&&!game.unlockedStages.some(s=>STAGES[s].mode==='manage'||STAGES[s].mode==='logistics'))continue;
-
-    const item=document.createElement('div');
-    item.className='shop-item panel'+(maxed?' owned':'');
-    item.innerHTML=`<h4>${u.icon} ${u.name} ${maxed?'✅':`(Lv ${lvl}/${u.maxLvl})`}</h4>
-      <p>${u.desc}</p>
-      <div class="price">${maxed?'MAXED':(canAfford?'':'🔒 ')+'$'+cost}</div>`;
-    if(!maxed&&canAfford){
-      item.onclick=()=>{
-        game.upgrades[u.id]=lvl+1;game.money-=cost;
-        playSound('upgrade',0.4);showShop();
-      };
-    }
-    upgGrid.appendChild(item);
-  }
-  upgSec.appendChild(upgGrid);
-  container.appendChild(upgSec);
+  if (activeTab === 'tools') buildToolShop(container);
+  else if (activeTab === 'weather') buildWeatherShop(container);
+  else if (activeTab === 'efficiency') buildEfficiencyShop(container);
+  else if (activeTab === 'areas') buildAreaShop(container);
 
   // Bottom close button
-  const bottomClose=document.createElement('div');
-  bottomClose.style.cssText='margin-top:16px;margin-bottom:20px;text-align:center';
-  bottomClose.innerHTML='<button class="btn" style="padding:8px 30px" id="btnCloseShop2">← Back to Work</button>';
+  const bottomClose = document.createElement('div');
+  bottomClose.style.cssText = 'margin-top:16px;margin-bottom:20px;text-align:center';
+  bottomClose.innerHTML = '<button class="btn" style="padding:8px 30px" id="btnCloseShop2">← Back to Work</button>';
   container.appendChild(bottomClose);
-  document.getElementById('btnCloseShop2').onclick=closeShop;
+  document.getElementById('btnCloseShop2').onclick = closeShop;
 }
 
-// ═══ MAIN LOOP ═══
+function buildToolShop(container) {
+  const sec = document.createElement('div');
+  sec.className = 'shop-section';
+  sec.innerHTML = '<h3>🔧 Clearing Tools — Your Bread & Butter</h3>';
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+
+  for (let i = 0; i < TOOLS.length; i++) {
+    const t = TOOLS[i];
+    const owned = game.ownedTools.includes(i);
+    const equipped = game.currentTool === i;
+    const canAfford = game.money >= t.cost;
+
+    const item = document.createElement('div');
+    item.className = 'shop-item panel' + (equipped ? ' owned' : (!owned && !canAfford ? ' locked' : ''));
+
+    let priceHTML = '';
+    if (equipped) priceHTML = '<div class="price">✅ EQUIPPED</div>';
+    else if (owned) priceHTML = '<div class="price" style="color:#88ccff;cursor:pointer">▶ Equip</div>';
+    else priceHTML = `<div class="price gold">${canAfford ? '' : '🔒 '}$${t.cost}</div>`;
+
+    item.innerHTML = `<h4>${t.icon} ${t.name}</h4>
+      <p>${t.desc}</p>
+      <p style="color:#4a8a6a;font-size:10px">Radius: ${t.radius}x | Power: ${t.power}x | Speed: ${t.speed}x</p>
+      ${priceHTML}`;
+
+    if (owned && !equipped) {
+      item.onclick = () => { game.currentTool = i; playSound('click', 0.2); showShop(); };
+    } else if (!owned && canAfford) {
+      item.onclick = () => {
+        game.money -= t.cost; game.ownedTools.push(i); game.currentTool = i;
+        playSound('upgrade', 0.4); showShop();
+      };
+    }
+    grid.appendChild(item);
+  }
+  sec.appendChild(grid);
+  container.appendChild(sec);
+}
+
+function buildWeatherShop(container) {
+  const sec = document.createElement('div');
+  sec.className = 'shop-section';
+  sec.innerHTML = '<h3>🌨️ Weather Manipulation — Make It Snow More 😈</h3><p style="font-size:11px;color:#8866cc;margin:-4px 0 10px 4px">More snow = more business. Nobody has to know.</p>';
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+
+  for (const w of WEATHER_UPGRADES) {
+    const owned = game.ownedWeather.includes(w.id);
+    const canAfford = game.money >= w.cost;
+
+    const item = document.createElement('div');
+    item.className = 'shop-item panel' + (owned ? ' owned' : (!canAfford ? ' locked' : ''));
+
+    item.innerHTML = `<h4>${w.icon} ${w.name}</h4>
+      <p>${w.desc}</p>
+      <p style="color:#8866cc;font-size:9px;font-style:italic">${w.flavor}</p>
+      <p style="color:#4a6a8a;font-size:10px">+${(w.snowBoost*100).toFixed(0)}% snow | +${(w.stormChance*100).toFixed(0)}% storm chance</p>
+      <div class="price ${owned ? '' : 'gold'}">${owned ? '✅ OWNED' : (canAfford ? '' : '🔒 ') + '$' + w.cost}</div>`;
+
+    if (!owned && canAfford) {
+      item.onclick = () => {
+        game.money -= w.cost; game.ownedWeather.push(w.id);
+        calcWeatherPower();
+        playSound('upgrade', 0.4);
+        showTooltip(w.flavor, 3);
+        showShop();
+      };
+    }
+    grid.appendChild(item);
+  }
+  sec.appendChild(grid);
+  container.appendChild(sec);
+}
+
+function buildEfficiencyShop(container) {
+  const sec = document.createElement('div');
+  sec.className = 'shop-section';
+  sec.innerHTML = '<h3>⚡ Efficiency Upgrades — Work Smarter</h3>';
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+
+  for (const e of EFFICIENCY_UPGRADES) {
+    const owned = game.ownedEfficiency.includes(e.id);
+    const canAfford = game.money >= e.cost;
+
+    const item = document.createElement('div');
+    item.className = 'shop-item panel' + (owned ? ' owned' : (!canAfford ? ' locked' : ''));
+
+    item.innerHTML = `<h4>${e.icon} ${e.name}</h4>
+      <p>${e.desc}</p>
+      <p style="color:#4a6a8a;font-size:10px">×${e.mult.toFixed(2)} multiplier</p>
+      <div class="price ${owned ? '' : 'gold'}">${owned ? '✅ OWNED' : (canAfford ? '' : '🔒 ') + '$' + e.cost}</div>`;
+
+    if (!owned && canAfford) {
+      item.onclick = () => {
+        game.money -= e.cost; game.ownedEfficiency.push(e.id);
+        calcEfficiency();
+        playSound('upgrade', 0.4); showShop();
+      };
+    }
+    grid.appendChild(item);
+  }
+  sec.appendChild(grid);
+  container.appendChild(sec);
+}
+
+function buildAreaShop(container) {
+  const sec = document.createElement('div');
+  sec.className = 'shop-section';
+  sec.innerHTML = '<h3>📍 Client Contracts — Bigger Areas, Better Pay</h3>';
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+
+  for (let i = 0; i < AREAS.length; i++) {
+    const a = AREAS[i];
+    const unlocked = game.unlockedAreas.includes(i);
+    const current = game.areaIdx === i;
+    const canAfford = game.money >= a.unlockCost;
+    const isNext = i === Math.max(...game.unlockedAreas) + 1;
+    const available = !unlocked && isNext;
+
+    const item = document.createElement('div');
+    item.className = 'shop-item panel' + (current ? ' owned' : (!unlocked && !available ? ' locked' : ''));
+
+    let priceHTML = '';
+    if (current) priceHTML = '<div class="price">📍 CURRENT</div>';
+    else if (unlocked) priceHTML = '<div class="price" style="color:#88ccff;cursor:pointer">▶ Switch here</div>';
+    else if (available) priceHTML = `<div class="price gold">${canAfford ? '' : '🔒 '}$${a.unlockCost}</div>`;
+    else priceHTML = '<div class="price" style="color:#405060">🔒 Get previous contract first</div>';
+
+    item.innerHTML = `<h4>📍 ${a.name}</h4>
+      <p>${a.desc}</p>
+      <p style="color:#4a8a6a;font-size:10px">${a.gridW}×${a.gridH} area | $${a.payPerUnit.toFixed(2)}/unit</p>
+      ${priceHTML}`;
+
+    if (unlocked && !current) {
+      item.onclick = () => {
+        initArea(i); playSound('click', 0.3); closeShop();
+      };
+    } else if (available && canAfford) {
+      item.onclick = () => {
+        game.money -= a.unlockCost; game.unlockedAreas.push(i);
+        initArea(i); playSound('complete', 0.4); closeShop();
+        showTooltip('📋 New contract: ' + a.name + '! Bigger area, better pay.', 4);
+      };
+    }
+    grid.appendChild(item);
+  }
+  sec.appendChild(grid);
+  container.appendChild(sec);
+}
+
+// ═══ MAIN GAME LOOP ═══
 let lastTime = performance.now();
 
 function gameLoop(now) {
-  const dt = Math.min((now-lastTime)/1000, 0.05);
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
-  const t = now/1000;
+  const t = now / 1000;
 
-  game.screenShake*=0.9;if(game.screenShake<0.1)game.screenShake=0;
+  game.screenShake *= 0.9; if (game.screenShake < 0.1) game.screenShake = 0;
   ctx.save();
-  if(game.screenShake>0)ctx.translate((Math.random()-0.5)*game.screenShake*2,(Math.random()-0.5)*game.screenShake*2);
+  if (game.screenShake > 0) ctx.translate((Math.random()-0.5)*game.screenShake*2, (Math.random()-0.5)*game.screenShake*2);
 
   drawBackground(t);
 
   // Distant terrain
-  const groundY=H*0.75;
-  const gg=ctx.createLinearGradient(0,groundY,0,H);
-  gg.addColorStop(0,'rgba(180,200,220,0.08)');gg.addColorStop(1,'rgba(140,160,180,0.03)');
-  ctx.fillStyle=gg;ctx.beginPath();ctx.moveTo(0,groundY);
-  for(let x=0;x<=W;x+=20)ctx.lineTo(x,groundY+Math.sin(x*0.01+t*0.2)*8+Math.sin(x*0.03)*4);
-  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+  const groundY = H * 0.75;
+  const gg = ctx.createLinearGradient(0, groundY, 0, H);
+  gg.addColorStop(0, 'rgba(180,200,220,0.08)'); gg.addColorStop(1, 'rgba(140,160,180,0.03)');
+  ctx.fillStyle = gg; ctx.beginPath(); ctx.moveTo(0, groundY);
+  for (let x = 0; x <= W; x += 20) ctx.lineTo(x, groundY + Math.sin(x*0.01 + t*0.2)*8 + Math.sin(x*0.03)*4);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
 
   emitAmbient();
 
-  if(game.state==='playing'){
-    const s=STAGES[game.stage];
-    game.stageTime+=dt;
+  if (game.state === 'playing') {
     ambientWind(dt);
 
-    if(s.mode==='direct'){updateDirect(dt,s);drawDirect();}
-    else if(s.mode==='plow'){updatePlow(dt,s);drawPlow();}
-    else if(s.mode==='manage'||s.mode==='logistics'){updateManage(dt,s);drawManage();}
+    if (game.stormActive) {
+      // STORM PHASE: snow falls, you clear, get paid
+      game.stormTimer -= dt;
+      accumulateSnow(dt);
+      updateClearing(dt);
 
-    // Passive income — you get paid for keeping things clear
-    tickPassiveIncome(dt);
+      // Warning when storm is almost over
+      if (game.stormTimer < 5 && !game.stormWarningShown) {
+        game.stormWarningShown = true;
+        showTooltip('Storm fading... clear as much as you can!', 3);
+      }
 
+      if (game.stormTimer <= 0) {
+        endStorm();
+      }
+    } else {
+      // DOWNTIME PHASE: snow slowly melts, plan for next storm
+      game.downtimeTimer -= dt;
+
+      // Slight snow melting during downtime
+      for (let gy = 0; gy < game.snowGridH; gy++)
+        for (let gx = 0; gx < game.snowGridW; gx++)
+          if (game.snow[gy][gx] > 0)
+            game.snow[gy][gx] = Math.max(0, game.snow[gy][gx] - 0.005 * dt);
+
+      // Can still clear during downtime (for remaining snow)
+      updateClearing(dt);
+
+      // Storm warning at 3 seconds
+      if (game.downtimeTimer <= 3 && game.downtimeTimer > 2.95) {
+        const warn = document.getElementById('stormWarning');
+        warn.style.opacity = '1';
+        setTimeout(() => { warn.style.opacity = '0'; }, 2500);
+        playSound('storm', 0.2);
+      }
+
+      if (game.downtimeTimer <= 0) {
+        startStorm();
+      }
+    }
+
+    drawSnowGrid();
+    drawPlayer();
     updateHUD();
     updateMoneyPops(dt);
     drawMoneyPops();
+
+    // Draw storm intensity overlay
+    if (game.stormActive) {
+      ctx.fillStyle = `rgba(150,170,220,${game.stormIntensity * 0.04})`;
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
-  updateParticles(dt);drawParticles();
+  updateParticles(dt); drawParticles();
 
-  if(game.tooltipTimer>0){game.tooltipTimer-=dt;if(game.tooltipTimer<=0)document.getElementById('tooltip').style.opacity='0';}
+  if (game.tooltipTimer > 0) {
+    game.tooltipTimer -= dt;
+    if (game.tooltipTimer <= 0) document.getElementById('tooltip').style.opacity = '0';
+  }
 
   ctx.restore();
   requestAnimationFrame(gameLoop);
 }
 
 // ═══ UI HANDLERS ═══
-document.getElementById('btnStart').onclick=()=>{
-  initAudio();game.state='playing';game.money=0;game.totalEarned=0;
-  game.upgrades={};game.unlockedStages=[0];
-  document.getElementById('startScreen').style.display='none';
-  initStage(0);playSound('click',0.3);
+document.getElementById('btnStart').onclick = () => {
+  initAudio();
+  game.state = 'playing';
+  game.money = 0; game.totalEarned = 0; game.totalVolumeCleared = 0; game.stormsCompleted = 0;
+  game.ownedTools = [0]; game.currentTool = 0;
+  game.ownedWeather = []; game.ownedEfficiency = [];
+  game.unlockedAreas = [0];
+  game.weatherPower = 0; game.efficiencyMult = 1.0;
+  game.moneyPops = [];
+  particles.length = 0;
+  document.getElementById('startScreen').style.display = 'none';
+  initArea(0);
+  // Start with first storm after a short delay
+  game.downtimeTimer = 5;
+  game.downtimeDuration = 5;
+  game.stormActive = false;
+  document.getElementById('gameHUD').style.display = 'flex';
+  showTooltip('Welcome! Your first storm is coming in 5 seconds. Get ready! 🌨️', 4);
+  playSound('click', 0.3);
 };
 
-document.getElementById('btnShop').onclick=()=>{
-  if(game._shopCooldown)return;
-  playSound('click',0.2);showShop();
+document.getElementById('btnShop').onclick = () => {
+  if (game._shopCooldown) return;
+  playSound('click', 0.2); showShop();
 };
 
-function closeShop(){
-  document.getElementById('shopScreen').style.display='none';
-  game.state='playing';
-  document.getElementById('gameHUD').style.display='flex';
-  const s=STAGES[game.stage];
-  document.getElementById('mgmtPanel').style.display=(s.mode==='manage'||s.mode==='logistics')?'block':'none';
-  playSound('click',0.2);
-  // Prevent btnShop from immediately reopening
-  game._shopCooldown=true;
-  setTimeout(()=>{game._shopCooldown=false;},200);
+function closeShop() {
+  document.getElementById('shopScreen').style.display = 'none';
+  game.state = 'playing';
+  document.getElementById('gameHUD').style.display = 'flex';
+  document.getElementById('hudTool').textContent = currentTool().name;
+  playSound('click', 0.2);
+  game._shopCooldown = true;
+  setTimeout(() => { game._shopCooldown = false; }, 200);
 }
-document.getElementById('btnCloseShop').onclick=closeShop;
+document.getElementById('btnCloseShop').onclick = closeShop;
 
-document.getElementById('btnStartContract').onclick=()=>{
-  document.getElementById('stageComplete').style.display='none';
-  game.state='playing';
-  const newStage=Math.max(...game.unlockedStages);
-  initStage(newStage);
-  playSound('click',0.3);
+document.getElementById('btnNextStorm').onclick = () => {
+  document.getElementById('stormReport').style.display = 'none';
+  startDowntime();
+  playSound('click', 0.3);
 };
 
 // ═══ KEYBOARD ═══
-window.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){
-    if(game.state==='shop')closeShop();
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (game.state === 'shop') closeShop();
+  }
+  // Quick shop access
+  if (e.key === 'b' || e.key === 'B') {
+    if (game.state === 'playing') { playSound('click', 0.2); showShop(); }
+    else if (game.state === 'shop') closeShop();
   }
 });
 
