@@ -50,12 +50,35 @@ canvas{display:block;width:100%;height:100%}
 #tooltip{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-size:13px;color:#6090b0;text-align:center;z-index:55;opacity:0;transition:opacity 0.5s;pointer-events:none;max-width:80%}
 .money-pop{position:absolute;pointer-events:none;font-weight:700;font-size:14px;color:#66ddaa;z-index:60;text-shadow:0 1px 4px rgba(0,0,0,0.5)}
 .storm-warning{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(24px,5vw,42px);font-weight:800;color:#aaccff;text-shadow:0 0 30px rgba(100,150,255,0.6);z-index:55;pointer-events:none;opacity:0;transition:opacity 0.5s}
-.tab-bar{display:flex;gap:4px;margin-bottom:10px;width:90%;max-width:700px}
-.tab-btn{flex:1;padding:8px;border:1px solid rgba(100,180,255,0.2);background:rgba(20,30,50,0.5);color:#6090b0;border-radius:8px 8px 0 0;cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.2s;text-align:center}
+.tab-bar{display:flex;gap:4px;margin-bottom:10px;width:90%;max-width:700px;flex-wrap:wrap}
+.tab-btn{flex:1;padding:8px;border:1px solid rgba(100,180,255,0.2);background:rgba(20,30,50,0.5);color:#6090b0;border-radius:8px 8px 0 0;cursor:pointer;font-size:11px;font-family:inherit;transition:all 0.2s;text-align:center;min-width:70px}
 .tab-btn.active{background:rgba(30,50,80,0.8);color:#aaddff;border-color:rgba(100,180,255,0.4)}
 .tab-btn:hover{background:rgba(30,50,80,0.6)}
+.tab-btn.tab-new{border-color:rgba(255,200,80,0.4);color:#ffcc88}
+.tab-btn.tab-new.active{border-color:rgba(255,200,80,0.6);color:#ffdd88}
 #comboDisplay{position:absolute;top:50%;right:20px;transform:translateY(-50%);font-size:28px;font-weight:800;color:#ffcc44;text-shadow:0 0 20px rgba(255,200,50,0.5);pointer-events:none;opacity:0;transition:opacity 0.3s,font-size 0.15s;z-index:55}
 #snowTypeDisplay{position:absolute;top:70px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;pointer-events:none;opacity:0;transition:opacity 0.5s;z-index:55;text-align:center}
+/* Phase 2 crew UI */
+.worker-card{text-align:left;padding:12px;cursor:default}
+.worker-card .worker-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.worker-card .worker-name{font-size:13px;font-weight:600;color:#aaddff}
+.worker-card .worker-role{font-size:10px;color:#8866cc}
+.worker-card .worker-stats{font-size:10px;color:#607890;line-height:1.6}
+.worker-card .morale-bar{width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:4px}
+.worker-card .morale-fill{height:100%;border-radius:2px;transition:width 0.3s,background 0.3s}
+.worker-card .worker-actions{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.worker-card .worker-actions .btn{padding:4px 10px;font-size:10px}
+.payroll-banner{width:90%;max-width:700px;padding:12px 16px;border-radius:8px;margin-bottom:10px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+.payroll-ok{background:rgba(100,255,150,0.08);border:1px solid rgba(100,255,150,0.2)}
+.payroll-warning{background:rgba(255,200,80,0.1);border:1px solid rgba(255,200,80,0.3)}
+.payroll-danger{background:rgba(255,80,60,0.12);border:1px solid rgba(255,80,60,0.3)}
+#crewHUD{display:none;position:absolute;bottom:12px;left:12px;right:12px;z-index:50;pointer-events:none;font-size:11px}
+#crewHUD .crew-mini{display:flex;gap:8px;flex-wrap:wrap}
+#crewHUD .crew-dot{display:flex;align-items:center;gap:3px;color:#80a0c0}
+.notification-popup{position:absolute;top:80px;right:16px;padding:10px 16px;border-radius:8px;font-size:12px;z-index:80;pointer-events:none;opacity:0;transition:opacity 0.4s;max-width:260px;line-height:1.5}
+.notification-popup.notify-warn{background:rgba(255,180,50,0.15);border:1px solid rgba(255,180,50,0.3);color:#ffcc88}
+.notification-popup.notify-bad{background:rgba(255,60,40,0.15);border:1px solid rgba(255,60,40,0.3);color:#ff8866}
+.notification-popup.notify-good{background:rgba(80,255,150,0.12);border:1px solid rgba(80,255,150,0.25);color:#88ffbb}
 </style>
 </head>
 <body>
@@ -79,12 +102,15 @@ canvas{display:block;width:100%;height:100%}
 <div class="hud-item" style="font-size:14px">💰 <span id="hudMoney" style="font-size:16px">$0</span></div>
 <div class="hud-item">📦 Pushed Off: <span id="hudVolume">0</span></div>
 <div class="hud-item">💵 Rate: <span id="hudRate">$0.50/unit</span></div>
+<div class="hud-item" id="hudPayroll" style="display:none">👥 Payroll: <span id="hudPayrollVal" style="color:#ffcc88">$0/cycle</span></div>
 </div>
 </div>
 <div id="tooltip"></div>
 <div class="storm-warning" id="stormWarning">⛈️ STORM INCOMING! ⛈️</div>
 <div id="comboDisplay">x1</div>
 <div id="snowTypeDisplay"></div>
+<div id="crewHUD"><div class="crew-mini" id="crewMini"></div></div>
+<div class="notification-popup" id="notifyPopup"></div>
 </div>
 
 <div id="startScreen" style="display:flex">
@@ -112,15 +138,13 @@ Invest in better tools. And maybe... make it snow more. 😈<br>
 <div id="shopSections"></div>
 </div>
 
-
 <script>
 // ════════════════════════════════════════════════════════
-// ARCTIC BLOWER v5 — Push Snow Off-Screen + Snow Types
+// ARCTIC BLOWER v6 — Phase 2: Management Sim
 // ════════════════════════════════════════════════════════
-// Core mechanic: Snow has MOMENTUM. You push it directionally.
-// Snow only counts as "cleared" when it exits the grid edge.
-// Different snow types have different weight/friction.
-// Pile snow up, herd it to edges, shove it off for big payouts.
+// Phase 1: Push snow off edges, weather manipulation, tool upgrades
+// Phase 2: Hire crews, dispatch to areas, manage payroll
+// Gradual transition — you still clear, but workers help more and more
 
 const C = document.getElementById('game');
 const ctx = C.getContext('2d');
@@ -201,16 +225,26 @@ function playSound(type, vol = 0.3) {
     g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(vol*0.3, now+0.8); g.gain.linearRampToValueAtTime(0, now+dur);
     src.start(now);
   } else if (type === 'edgeclear') {
-    // Satisfying "whoosh-ching" when snow exits the edge
     const o = audioCtx.createOscillator(); o.type = 'triangle';
     o.frequency.setValueAtTime(600, now); o.frequency.exponentialRampToValueAtTime(1400, now+0.15);
     o.connect(g); g.gain.exponentialRampToValueAtTime(0.01, now + 0.2); o.start(now); o.stop(now + 0.2);
+  } else if (type === 'hire') {
+    const o = audioCtx.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(300, now); o.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    o.connect(g); g.gain.exponentialRampToValueAtTime(0.01, now + 0.25); o.start(now); o.stop(now + 0.25);
+    const o2 = audioCtx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 800;
+    const g2 = audioCtx.createGain(); g2.connect(audioCtx.destination);
+    g2.gain.setValueAtTime(vol * 0.3, now + 0.15); g2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+    o2.connect(g2); o2.start(now + 0.15); o2.stop(now + 0.35);
+  } else if (type === 'fired') {
+    const o = audioCtx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(400, now); o.frequency.exponentialRampToValueAtTime(150, now + 0.3);
+    o.connect(g); g.gain.exponentialRampToValueAtTime(0.01, now + 0.4); o.start(now); o.stop(now + 0.4);
   }
 }
 
 let windTimer = 0;
 function ambientWind(dt) { windTimer -= dt; if (windTimer <= 0) { playSound('wind', 0.15); windTimer = 4 + Math.random() * 5; } }
-
 // ═══ PARTICLES ═══
 class Particle {
   constructor(x,y,vx,vy,life,size,color,type='snow') {
@@ -314,18 +348,11 @@ function drawBackground(t) {
   if (!game.stormActive || game.stormIntensity < 0.6) { drawStars(t); }
   drawAurora(t);
 }
-
 // ═══════════════════════════════════════
-// GAME DESIGN: Push Snow Off-Screen
+// GAME DATA DEFINITIONS
 // ═══════════════════════════════════════
-// Snow has VELOCITY on each grid cell. When you blow, snow accelerates
-// in the blow direction. Snow transfers to adjacent cells. When snow
-// reaches a grid edge, it falls off and you get PAID.
-// Different snow types have different mass (harder to accelerate) and
-// friction (slows down faster).
 
 // ═══ SNOW TYPES ═══
-// Each storm picks a type. Heavier = harder to push = worth more.
 const SNOW_TYPES = [
   { id:'powder', name:'Dry Powder', icon:'❄️', weight:0.6, friction:0.85, value:1.0,
     color:{r:220,g:230,b:255}, desc:'Light and fluffy. Easy to push, blows everywhere.',
@@ -344,8 +371,7 @@ const SNOW_TYPES = [
     hint:'The worst. But the pay is worth it.' },
 ];
 
-// ═══ TOOL DEFINITIONS ═══
-// force = how fast snow accelerates, width = cells affected, reach = how far from player
+// ═══ TOOLS ═══
 const TOOLS = [
   { id:'shovel', name:'Snow Shovel', force:1.0, width:1.5, reach:1.5, speed:1.0, cost:0, icon:'🪣',
     desc:'Humble beginnings. Back-breaking work, but it pays the bills.' },
@@ -359,7 +385,7 @@ const TOOLS = [
     desc:'People actually take you seriously. Terrifying.' },
 ];
 
-// ═══ WEATHER MANIPULATION UPGRADES ═══
+// ═══ WEATHER MANIPULATION ═══
 const WEATHER_UPGRADES = [
   { id:'prayer', name:'Pray for Snow', snowBoost:0.05, stormChance:0.02, cost:10, icon:'🙏',
     desc:'Stand outside and ask the sky nicely. Surprisingly, it seems to work?', flavor:'Faith-based meteorology.' },
@@ -395,7 +421,7 @@ const EFFICIENCY_UPGRADES = [
     desc:'+20% speed. Work longer, work faster. Never feel cold again.' },
 ];
 
-// ═══ CLIENT/AREA DEFINITIONS ═══
+// ═══ AREAS ═══
 const AREAS = [
   { id:'porch', name:'Mrs. Henderson\'s Porch', gridW:14, gridH:10, payPerUnit:0.50, unlockCost:0,
     desc:'Your very first client. She pays per shovelful and bakes cookies.', snowDepthMax:1.0 },
@@ -411,40 +437,65 @@ const AREAS = [
     desc:'State contract. This is the big leagues.', snowDepthMax:3.0 },
 ];
 
+// ═══════════════════════════════════════
+// PHASE 2: CREW MANAGEMENT DEFINITIONS
+// ═══════════════════════════════════════
+
+const FIRST_NAMES = ['Jake','Mike','Sarah','Tom','Elena','Carlos','Pete','Lisa','Dave','Raj',
+  'Kim','Omar','Sven','Yuki','Maria','Hans','Olga','Finn','Nadia','Buck','Rose','Dmitri','Ana','Wei','Zara'];
+const LAST_NAMES = ['Frost','Snow','Winter','Ice','Blizzard','Storm','Cold','Hale','North','Berg',
+  'Pike','Vale','Wolf','Hart','Stone','Cruz','Moon','Reed','Lake','Hill','Chill','Drift','Floe','Gale','Sleet'];
+
+function randomWorkerName() {
+  return FIRST_NAMES[Math.floor(Math.random()*FIRST_NAMES.length)] + ' ' +
+         LAST_NAMES[Math.floor(Math.random()*LAST_NAMES.length)];
+}
+
+const WORKER_TIERS = [
+  { id:'rookie', name:'Rookie Shoveler', skill:0.25, salary:20, hireCost:80, icon:'🧑',
+    desc:'Fresh off the street. Slow but cheap. Everyone starts somewhere.' },
+  { id:'experienced', name:'Experienced Clearer', skill:0.55, salary:45, hireCost:200, icon:'👷',
+    desc:'Knows the difference between powder and slush. Reliable.' },
+  { id:'veteran', name:'Veteran Operator', skill:0.85, salary:80, hireCost:500, icon:'🧑‍✈️',
+    desc:'Can handle any storm. Runs a plow like a surgeon.' },
+  { id:'lead', name:'Crew Lead', skill:0.6, salary:100, hireCost:400, icon:'👔', isLead:true,
+    desc:'Manages up to 3 workers. +20% efficiency to their crew. Less babysitting for you.' },
+];
+
+// When the player unlocks Phase 2 (staffing tab)
+const PHASE2_UNLOCK_EARNED = 2000;
+const PHASE2_UNLOCK_TOOL = 3; // Snow blower or above
+
+let nextWorkerId = 1;
 // ═══ GAME STATE ═══
 const game = {
   state: 'menu',
   money: 0,
   totalEarned: 0,
-  totalVolumePushed: 0, // snow units pushed off screen
+  totalVolumePushed: 0,
   stormsCompleted: 0,
 
-  // Current area
+  // Current area (what the PLAYER is personally clearing)
   areaIdx: 0,
   unlockedAreas: [0],
 
-  // Snow grid: each cell has { depth, vx, vy, type }
-  // depth = amount of snow, vx/vy = velocity (cells/sec)
+  // Snow grid
   snow: null,
   snowGridW: 0, snowGridH: 0,
   cellSize: 0, offsetX: 0, offsetY: 0,
   totalCells: 0,
-
-  // Current storm snow type
-  snowType: 0, // index into SNOW_TYPES
+  snowType: 0,
 
   // Player
   playerX: 0, playerY: 0,
   mouseX: 0, mouseY: 0, mouseDown: false,
-
-  // Blow direction (from player toward mouse)
   blowAngle: 0,
 
   // Tools
   currentTool: 0,
   ownedTools: [0],
 
-  // Weather manipulation
+  // Weather
   ownedWeather: [],
   weatherPower: 0,
 
@@ -462,25 +513,37 @@ const game = {
   baseStormChance: 0.3,
   stormWarningShown: false,
 
-  // Per-storm tracking
+  // Per-storm
   volumeThisStorm: 0,
   moneyThisStorm: 0,
 
-  // Combo system — rapid edge-clears build combo
+  // Combo
   combo: 1,
-  comboTimer: 0, // seconds since last edge clear
-  comboDecay: 2.5, // seconds until combo resets
+  comboTimer: 0,
+  comboDecay: 2.5,
   maxCombo: 1,
 
-  // Edge glow effect
+  // Edge glow
   edgeGlow: { top:0, bottom:0, left:0, right:0 },
 
-  // Visual juice
+  // Visual
   screenShake: 0,
   tooltipTimer: 0,
   moneyPops: [],
-  cleared: 0, // percentage of grid that's clear
+  cleared: 0,
   _shopCooldown: false,
+
+  // ═══ PHASE 2 STATE ═══
+  phase2Unlocked: false,
+  phase2Announced: false,
+  workers: [],         // Array of worker objects
+  // Worker object: { id, name, tier, morale, assignedArea, leadId, earnings, stormsWorked }
+  totalPayroll: 0,     // Calculated each cycle
+  payrollHistory: [],   // Last N payroll events
+  workerEarnings: {},   // { areaIdx: amount } — passive income from workers in other areas
+
+  // Notifications
+  notifications: [],
 };
 
 // ═══ HELPER FUNCTIONS ═══
@@ -505,6 +568,20 @@ function calcEfficiency() {
     if (e) m *= e.mult;
   }
   game.efficiencyMult = m;
+}
+
+function calcPayroll() {
+  let total = 0;
+  for (const w of game.workers) {
+    const tier = WORKER_TIERS.find(t => t.id === w.tier);
+    if (tier) total += tier.salary;
+  }
+  game.totalPayroll = total;
+}
+
+function isPhase2Available() {
+  return game.totalEarned >= PHASE2_UNLOCK_EARNED ||
+    game.ownedTools.some(t => t >= PHASE2_UNLOCK_TOOL);
 }
 
 // ═══ INPUT ═══
@@ -546,6 +623,15 @@ function earnMoney(amount, x, y) {
   if (x !== undefined && amount >= 0.10) addMoneyPop(x, y, amount);
 }
 
+// ═══ NOTIFICATIONS ═══
+function showNotification(text, type='warn', dur=4) {
+  const el = document.getElementById('notifyPopup');
+  el.textContent = text;
+  el.className = 'notification-popup notify-' + type;
+  el.style.opacity = '1';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.opacity = '0'; }, dur * 1000);
+}
 // ═══ AREA INITIALIZATION ═══
 function initArea(idx) {
   const a = AREAS[idx];
@@ -556,7 +642,6 @@ function initArea(idx) {
   game.cellSize = Math.min((W - padX*2) / a.gridW, (H - padY*2) / a.gridH);
   game.offsetX = (W - a.gridW * game.cellSize) / 2;
   game.offsetY = (H - a.gridH * game.cellSize) / 2 + 20;
-  // Initialize snow grid — each cell: { depth, vx, vy }
   game.snow = [];
   for (let y = 0; y < a.gridH; y++) {
     game.snow[y] = [];
@@ -567,7 +652,6 @@ function initArea(idx) {
   game.totalCells = a.gridW * a.gridH;
   game.playerX = W / 2;
   game.playerY = H / 2;
-
   document.getElementById('hudArea').textContent = a.name;
   document.getElementById('hudTool').textContent = currentTool().name;
 }
@@ -584,19 +668,14 @@ function startStorm() {
   game.moneyThisStorm = 0;
   game.stormWarningShown = false;
 
-  // Pick a snow type — weighted by storm intensity and weather power
-  // Higher weather power = chance of harder snow types
   const maxTypeIdx = Math.min(SNOW_TYPES.length - 1, Math.floor(game.weatherPower * 3) + 1);
   game.snowType = Math.floor(Math.random() * (maxTypeIdx + 1));
-  // Occasionally force harder types for variety
-  if (game.stormsCompleted > 2 && Math.random() < 0.3) {
+  if (game.stormsCompleted > 2 && Math.random() < 0.3)
     game.snowType = Math.min(SNOW_TYPES.length - 1, game.snowType + 1);
-  }
 
   const st = currentSnowType();
   playSound('storm', 0.4);
   showTooltip(`⛈️ ${st.icon} ${st.name} storm! ${st.hint}`, 4);
-  // Show snow type display
   const std = document.getElementById('snowTypeDisplay');
   std.textContent = `${st.icon} ${st.name} — ${st.desc}`;
   std.style.color = `rgb(${st.color.r},${st.color.g},${st.color.b})`;
@@ -612,6 +691,22 @@ function endStorm() {
   game.stormActive = false;
   game.stormTimer = 0;
   game.stormsCompleted++;
+
+  // ═══ PHASE 2: Process payroll at end of each storm cycle ═══
+  if (game.workers.length > 0) {
+    processPayroll();
+    processWorkerEarnings();
+  }
+
+  // Check Phase 2 unlock
+  if (!game.phase2Unlocked && isPhase2Available()) {
+    game.phase2Unlocked = true;
+    if (!game.phase2Announced) {
+      game.phase2Announced = true;
+      showNotification('🎉 NEW: Staffing tab unlocked in Business HQ! Hire your first employee!', 'good', 8);
+    }
+  }
+
   startDowntime();
 }
 
@@ -624,7 +719,117 @@ function startDowntime() {
   showTooltip('☀️ Calm weather. Push remaining snow off the edges! Then plan & upgrade.', 3);
 }
 
-// ═══ SNOW ACCUMULATION (during storms) ═══
+// ═══════════════════════════════════════
+// PHASE 2: PAYROLL & WORKER EARNINGS
+// ═══════════════════════════════════════
+
+function processPayroll() {
+  if (game.workers.length === 0) return;
+
+  calcPayroll();
+  const payroll = game.totalPayroll;
+
+  if (game.money >= payroll) {
+    // Can pay everyone
+    game.money -= payroll;
+    for (const w of game.workers) {
+      w.morale = Math.min(100, w.morale + 5); // Paid workers get happier
+    }
+    game.payrollHistory.push({ amount: payroll, paid: true, storm: game.stormsCompleted });
+    showNotification(`💰 Payroll: -$${payroll.toFixed(0)} for ${game.workers.length} worker${game.workers.length>1?'s':''}`, 'good', 3);
+  } else {
+    // Can't pay! Morale drops, some may quit
+    const shortfall = payroll - game.money;
+    game.money = 0; // Spent everything we had
+
+    let quitters = [];
+    for (const w of game.workers) {
+      w.morale -= 25 + Math.random() * 15; // Big morale hit
+      if (w.morale <= 0) {
+        quitters.push(w);
+      }
+    }
+
+    // Remove quitters
+    for (const q of quitters) {
+      const idx = game.workers.indexOf(q);
+      if (idx >= 0) game.workers.splice(idx, 1);
+      playSound('fired', 0.3);
+    }
+
+    calcPayroll();
+    game.payrollHistory.push({ amount: payroll, paid: false, shortfall, quit: quitters.length, storm: game.stormsCompleted });
+
+    if (quitters.length > 0) {
+      showNotification(`💸 Can't make payroll! ${quitters.length} worker${quitters.length>1?'s':''} quit! Short $${shortfall.toFixed(0)}`, 'bad', 6);
+    } else {
+      showNotification(`⚠️ Payroll short by $${shortfall.toFixed(0)}! Morale dropping...`, 'warn', 5);
+    }
+  }
+
+  // Natural morale decay for unhappy workers
+  for (const w of game.workers) {
+    if (w.morale < 30) {
+      w.morale -= 3; // Unhappy workers get more unhappy
+    }
+  }
+
+  // Check for more quitters from accumulated low morale
+  const lateQuitters = game.workers.filter(w => w.morale <= 0);
+  for (const q of lateQuitters) {
+    const idx = game.workers.indexOf(q);
+    if (idx >= 0) game.workers.splice(idx, 1);
+  }
+  if (lateQuitters.length > 0) {
+    calcPayroll();
+    showNotification(`😤 ${lateQuitters.length} more worker${lateQuitters.length>1?'s':''} walked out! (low morale)`, 'bad', 4);
+  }
+}
+
+function processWorkerEarnings() {
+  // Workers assigned to areas generate passive income based on their skill
+  // They simulate clearing snow in areas you're NOT personally in
+  game.workerEarnings = {};
+
+  for (const w of game.workers) {
+    if (w.assignedArea === null || w.assignedArea === undefined) continue;
+    if (w.assignedArea === game.areaIdx) continue; // Workers in YOUR area help differently (see updateWorkerAI)
+
+    const area = AREAS[w.assignedArea];
+    if (!area) continue;
+    if (!game.unlockedAreas.includes(w.assignedArea)) continue;
+
+    const tier = WORKER_TIERS.find(t => t.id === w.tier);
+    if (!tier) continue;
+
+    // Base earning = area pay × skill × storm intensity × duration factor
+    const stormFactor = game.stormIntensity || 0.5;
+    const skillFactor = tier.skill;
+    // Lead bonus: if this worker has a lead, +20% efficiency
+    const leadBonus = game.workers.some(l =>
+      WORKER_TIERS.find(t => t.id === l.tier)?.isLead && l.assignedArea === w.assignedArea
+    ) ? 1.2 : 1.0;
+
+    const moraleFactor = 0.5 + (w.morale / 100) * 0.5; // 50-100% based on morale
+    const earnings = area.payPerUnit * 15 * skillFactor * stormFactor * leadBonus * moraleFactor;
+
+    if (!game.workerEarnings[w.assignedArea]) game.workerEarnings[w.assignedArea] = 0;
+    game.workerEarnings[w.assignedArea] += earnings;
+    w.earnings = (w.earnings || 0) + earnings;
+  }
+
+  // Add passive earnings to money
+  let totalPassive = 0;
+  for (const areaIdx in game.workerEarnings) {
+    totalPassive += game.workerEarnings[areaIdx];
+  }
+  if (totalPassive > 0) {
+    game.money += totalPassive;
+    game.totalEarned += totalPassive;
+    showNotification(`📋 Crew earnings from other areas: +$${totalPassive.toFixed(0)}`, 'good', 4);
+  }
+}
+// ═══ SNOW ACCUMULATION ═══
 function accumulateSnow(dt) {
   if (!game.stormActive) return;
   const area = currentArea();
@@ -641,14 +846,188 @@ function accumulateSnow(dt) {
   }
 }
 
-// ═══ SNOW PHYSICS — THE CORE MECHANIC ═══
-// Snow has velocity (vx, vy) per cell. Each frame:
-// 1. Player body displacement — walking through snow pushes it aside
-// 2. Apply player blow force to cells in range
-// 3. Move snow based on velocity (transfer between cells, creating PILES)
-// 4. Snow hitting edges = pushed off = PAID
-// 5. Apply friction to slow snow down
+// ═══════════════════════════════════════════════════
+// PHASE 2: WORKER AI — Workers clearing snow on-screen
+// ═══════════════════════════════════════════════════
+// Workers assigned to the player's current area are visible on screen
+// and autonomously push snow toward the nearest edge.
 
+function updateWorkerAI(dt) {
+  const workersHere = game.workers.filter(w => w.assignedArea === game.areaIdx);
+  if (workersHere.length === 0) return;
+
+  const snow = game.snow;
+  const cs = game.cellSize;
+  const ox = game.offsetX, oy = game.offsetY;
+  const gw = game.snowGridW, gh = game.snowGridH;
+  const area = currentArea();
+  const st = currentSnowType();
+
+  for (const w of workersHere) {
+    const tier = WORKER_TIERS.find(t => t.id === w.tier);
+    if (!tier) continue;
+
+    // Initialize worker position if needed
+    if (w.wx === undefined) {
+      w.wx = ox + (0.2 + Math.random() * 0.6) * gw * cs;
+      w.wy = oy + (0.2 + Math.random() * 0.6) * gh * cs;
+      w.targetGx = -1;
+      w.targetGy = -1;
+      w.aiTimer = 0;
+    }
+
+    w.aiTimer -= dt;
+
+    // Lead bonus for workers in same area
+    const hasLead = game.workers.some(l =>
+      WORKER_TIERS.find(t => t.id === l.tier)?.isLead && l.assignedArea === w.assignedArea && l.id !== w.id
+    );
+    const leadMult = hasLead ? 1.2 : 1.0;
+    const moraleMult = 0.5 + (w.morale / 100) * 0.5;
+    const skillMult = tier.skill * leadMult * moraleMult;
+
+    // Find deepest snow cell to target (retarget every 2-3 seconds)
+    if (w.aiTimer <= 0 || w.targetGx < 0) {
+      w.aiTimer = 2 + Math.random() * 1.5;
+      let bestDepth = 0, bestGx = -1, bestGy = -1;
+
+      // Sample random cells to find deep snow (not exhaustive, for performance)
+      for (let i = 0; i < 20; i++) {
+        const rgx = Math.floor(Math.random() * gw);
+        const rgy = Math.floor(Math.random() * gh);
+        if (snow[rgy][rgx].depth > bestDepth) {
+          bestDepth = snow[rgy][rgx].depth;
+          bestGx = rgx; bestGy = rgy;
+        }
+      }
+      if (bestGx >= 0) {
+        w.targetGx = bestGx;
+        w.targetGy = bestGy;
+      }
+    }
+
+    // Move toward target
+    if (w.targetGx >= 0) {
+      const targetX = ox + w.targetGx * cs + cs/2;
+      const targetY = oy + w.targetGy * cs + cs/2;
+      const dx = targetX - w.wx, dy = targetY - w.wy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist > cs * 0.8) {
+        // Move toward target
+        const speed = 120 * skillMult;
+        const move = Math.min(dist, speed * dt);
+        w.wx += (dx/dist) * move;
+        w.wy += (dy/dist) * move;
+      }
+
+      // Push snow — simplified blow around the worker position
+      const workerGx = Math.floor((w.wx - ox) / cs);
+      const workerGy = Math.floor((w.wy - oy) / cs);
+
+      if (workerGx >= 0 && workerGx < gw && workerGy >= 0 && workerGy < gh) {
+        // Determine push direction — toward nearest edge
+        const distLeft = workerGx;
+        const distRight = gw - 1 - workerGx;
+        const distTop = workerGy;
+        const distBottom = gh - 1 - workerGy;
+        const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+        let pushNx = 0, pushNy = 0;
+        if (minDist === distLeft) pushNx = -1;
+        else if (minDist === distRight) pushNx = 1;
+        else if (minDist === distTop) pushNy = -1;
+        else pushNy = 1;
+
+        // Apply force to nearby cells
+        const pushForce = 2.0 * skillMult / st.weight;
+        const pushRange = 2;
+
+        for (let dy2 = -pushRange; dy2 <= pushRange; dy2++) {
+          for (let dx2 = -pushRange; dx2 <= pushRange; dx2++) {
+            const cgx = workerGx + dx2, cgy = workerGy + dy2;
+            if (cgx < 0 || cgx >= gw || cgy < 0 || cgy >= gh) continue;
+            const cell = snow[cgy][cgx];
+            if (cell.depth < 0.02) continue;
+
+            const cdist = Math.sqrt(dx2*dx2 + dy2*dy2);
+            if (cdist > pushRange) continue;
+            const falloff = 1 - cdist / (pushRange + 0.5);
+
+            cell.vx += pushNx * pushForce * falloff * dt;
+            cell.vy += pushNy * pushForce * falloff * dt;
+          }
+        }
+
+        // Small particle effect
+        if (Math.random() < 0.05 * skillMult) {
+          const angle = Math.atan2(pushNy, pushNx);
+          emitSnow(w.wx, w.wy, angle, 1, 15);
+        }
+      }
+    }
+  }
+}
+
+function drawWorkers() {
+  const workersHere = game.workers.filter(w => w.assignedArea === game.areaIdx);
+  for (const w of workersHere) {
+    if (w.wx === undefined) continue;
+    const tier = WORKER_TIERS.find(t => t.id === w.tier);
+    if (!tier) continue;
+
+    // Worker body
+    const moralePct = w.morale / 100;
+    const bodyColor = moralePct > 0.6 ? '#4488cc' : moralePct > 0.3 ? '#ccaa44' : '#cc4444';
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath(); ctx.arc(w.wx, w.wy - 5, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = bodyColor;
+    ctx.fillRect(w.wx - 3, w.wy + 1, 6, 8);
+
+    // Tier icon above
+    ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(tier.icon, w.wx, w.wy - 14);
+
+    // Small morale bar under
+    const barW = 14, barH = 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(w.wx - barW/2, w.wy + 11, barW, barH);
+    ctx.fillStyle = moralePct > 0.6 ? '#44cc66' : moralePct > 0.3 ? '#cccc44' : '#cc4444';
+    ctx.fillRect(w.wx - barW/2, w.wy + 11, barW * moralePct, barH);
+  }
+}
+
+// ═══ CREW HUD (mini display at bottom) ═══
+function updateCrewHUD() {
+  if (game.workers.length === 0) {
+    document.getElementById('crewHUD').style.display = 'none';
+    document.getElementById('hudPayroll').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('crewHUD').style.display = 'block';
+  document.getElementById('hudPayroll').style.display = 'flex';
+  document.getElementById('hudPayrollVal').textContent = '$' + game.totalPayroll.toFixed(0) + '/cycle';
+
+  // Color code payroll warning
+  const payrollEl = document.getElementById('hudPayrollVal');
+  if (game.money < game.totalPayroll * 2) {
+    payrollEl.style.color = '#ff6644'; // Danger — less than 2 cycles of pay
+  } else if (game.money < game.totalPayroll * 5) {
+    payrollEl.style.color = '#ffcc88'; // Warning
+  } else {
+    payrollEl.style.color = '#88ffbb'; // Safe
+  }
+
+  const mini = document.getElementById('crewMini');
+  const workersHere = game.workers.filter(w => w.assignedArea === game.areaIdx).length;
+  const workersElsewhere = game.workers.length - workersHere;
+
+  mini.innerHTML = `<span class="crew-dot">👥 ${game.workers.length} staff</span>` +
+    (workersHere > 0 ? `<span class="crew-dot" style="color:#88ccff">🔧 ${workersHere} here</span>` : '') +
+    (workersElsewhere > 0 ? `<span class="crew-dot" style="color:#88ffbb">📋 ${workersElsewhere} on other jobs</span>` : '');
+}
+// ═══ SNOW PHYSICS — THE CORE MECHANIC ═══
 function updateSnowPhysics(dt) {
   const snow = game.snow;
   const cs = game.cellSize;
@@ -657,14 +1036,13 @@ function updateSnowPhysics(dt) {
   const st = currentSnowType();
   const gw = game.snowGridW, gh = game.snowGridH;
   const area = currentArea();
-  const pileMax = area.snowDepthMax * 3.0; // Snow can pile up to 3x normal — dramatic walls!
+  const pileMax = area.snowDepthMax * 3.0;
 
-  // 1. PLAYER BODY DISPLACEMENT — walking through snow pushes it in your direction
+  // 1. PLAYER BODY DISPLACEMENT
   if (game.state === 'playing') {
     const pgx = Math.floor((game.playerX - ox) / cs);
     const pgy = Math.floor((game.playerY - oy) / cs);
 
-    // Push snow out of the cells the player occupies and adjacent cells
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         const gx = pgx + dx, gy = pgy + dy;
@@ -672,46 +1050,36 @@ function updateSnowPhysics(dt) {
         const cell = snow[gy][gx];
         if (cell.depth < 0.02) continue;
 
-        // How close is the player to this cell's center?
         const cx = ox + gx * cs + cs / 2, cy = oy + gy * cs + cs / 2;
         const distX = game.playerX - cx, distY = game.playerY - cy;
         const dist = Math.sqrt(distX * distX + distY * distY);
         const pushRadius = cs * 1.2;
         if (dist > pushRadius) continue;
 
-        // Proximity factor: closer = stronger displacement
         const proximity = 1 - dist / pushRadius;
-
-        // Determine push direction — away from player center
         let pushNx, pushNy;
         if (dist > 1) {
-          pushNx = -distX / dist;
-          pushNy = -distY / dist;
+          pushNx = -distX / dist; pushNy = -distY / dist;
         } else {
-          // Player is dead center on cell, push in movement direction
           const mdx = game.mouseX - game.playerX, mdy = game.mouseY - game.playerY;
           const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
           if (mdist > 1) { pushNx = mdx/mdist; pushNy = mdy/mdist; }
           else { pushNx = 0; pushNy = -1; }
         }
 
-        // Displace snow — heavier snow resists body push more
         const displacePower = (1.5 / st.weight) * proximity * dt * 60;
         const displaceAmount = Math.min(cell.depth * 0.3, displacePower * 0.1);
 
         if (displaceAmount > 0.001) {
-          // Add velocity to push snow away from player
           cell.vx += pushNx * displacePower * 2.0;
           cell.vy += pushNy * displacePower * 2.0;
 
-          // Direct displacement for immediate feedback
           const tgx = gx + Math.round(pushNx);
           const tgy = gy + Math.round(pushNy);
           if (tgx >= 0 && tgx < gw && tgy >= 0 && tgy < gh) {
             const move = Math.min(displaceAmount, cell.depth * 0.15);
             cell.depth -= move;
             snow[tgy][tgx].depth += move;
-            // Give the target cell some momentum too for chain piling
             snow[tgy][tgx].vx += pushNx * 0.5;
             snow[tgy][tgx].vy += pushNy * 0.5;
           }
@@ -732,8 +1100,6 @@ function updateSnowPhysics(dt) {
       const reach = tool.reach * game.efficiencyMult * cs;
       const width = tool.width * game.efficiencyMult * cs;
       const force = tool.force * game.efficiencyMult * 8.0;
-
-      // Adjust force for snow type weight
       const effectiveForce = force / st.weight;
 
       let anySnowHit = false;
@@ -742,40 +1108,30 @@ function updateSnowPhysics(dt) {
         for (let gx = 0; gx < gw; gx++) {
           if (snow[gy][gx].depth <= 0.01) continue;
           const cx = ox + gx*cs + cs/2, cy = oy + gy*cs + cs/2;
-
           const toCellX = cx - px, toCellY = cy - py;
           const cellDist = Math.sqrt(toCellX*toCellX + toCellY*toCellY);
           if (cellDist > reach) continue;
-
           const dot = (toCellX * blowNx + toCellY * blowNy);
           if (dot < 0) continue;
-
           const cross = Math.abs(toCellX * blowNy - toCellY * blowNx);
           const maxWidth = width * (0.3 + 0.7 * (dot / reach));
           if (cross > maxWidth) continue;
-
           const distFalloff = 1 - (cellDist / reach) * 0.6;
           const widthFalloff = 1 - (cross / maxWidth) * 0.5;
           const totalForce = effectiveForce * distFalloff * widthFalloff;
-
           snow[gy][gx].vx += blowNx * totalForce * dt;
           snow[gy][gx].vy += blowNy * totalForce * dt;
-
           anySnowHit = true;
-
-          if (Math.random() < 0.04 * tool.force) {
+          if (Math.random() < 0.04 * tool.force)
             emitSnow(cx, cy, game.blowAngle, 1, 30 + tool.force * 8);
-          }
         }
       }
-
       if (anySnowHit && Math.random() < 0.3) playSound('blow', 0.04 + tool.force * 0.01);
       if (anySnowHit) game.screenShake = Math.min(2, game.screenShake + 0.3 * dt);
     }
   }
 
-  // 3. MOVE SNOW — transfer between cells based on velocity, creating PILES
-  // More snow moves per frame = visible bulldozer effect
+  // 3. MOVE SNOW — transfer between cells
   const transfers = [];
   let edgeClearTotal = 0;
 
@@ -783,49 +1139,35 @@ function updateSnowPhysics(dt) {
     for (let gx = 0; gx < gw; gx++) {
       const cell = snow[gy][gx];
       if (cell.depth <= 0.01) { cell.vx = 0; cell.vy = 0; continue; }
-
       const speed = Math.sqrt(cell.vx * cell.vx + cell.vy * cell.vy);
       if (speed < 0.08) continue;
 
-      // How much snow moves — INCREASED for satisfying piling
-      // Faster snow = more moves. Deep snow moves more in bulk.
       const speedFactor = Math.min(speed, 8) * dt * 1.2;
-      const depthFactor = 0.5 + cell.depth * 0.3; // deeper snow moves in bigger chunks
+      const depthFactor = 0.5 + cell.depth * 0.3;
       const moveAmount = Math.min(cell.depth * 0.7, speedFactor * depthFactor);
       if (moveAmount < 0.001) continue;
 
       const nx = cell.vx / speed, ny = cell.vy / speed;
-
       let tgx = gx + Math.round(nx);
       let tgy = gy + Math.round(ny);
 
-      // CHECK EDGE EXIT — this is where you get PAID
       if (tgx < 0 || tgx >= gw || tgy < 0 || tgy >= gh) {
         transfers.push({ fromX:gx, fromY:gy, amount:moveAmount, edge:true,
           edgeSide: tgx < 0 ? 'left' : tgx >= gw ? 'right' : tgy < 0 ? 'top' : 'bottom',
           screenX: ox + gx*cs + cs/2, screenY: oy + gy*cs + cs/2 });
         edgeClearTotal += moveAmount;
       } else {
-        // Snow pushes into adjacent cell — PILING UP!
         const targetDepth = snow[tgy][tgx].depth;
-        const headroom = pileMax - targetDepth; // 3x max = dramatic walls
-
+        const headroom = pileMax - targetDepth;
         if (headroom > 0.001) {
           const actualMove = Math.min(moveAmount, headroom);
-          // Momentum carries further for chain-piling effect
           transfers.push({ fromX:gx, fromY:gy, toX:tgx, toY:tgy, amount:actualMove, edge:false,
-            vx: cell.vx * 0.85, vy: cell.vy * 0.85 }); // 85% momentum transfer (was 70%)
+            vx: cell.vx * 0.85, vy: cell.vy * 0.85 });
         }
-
-        // Compression: snow hitting a deep pile slows but also pushes SIDEWAYS
         if (headroom < moveAmount * 0.3) {
-          // Pile is nearly full — snow slows down
-          cell.vx *= 0.3;
-          cell.vy *= 0.3;
-          // Spread sideways (perpendicular to velocity) for natural pile shape
+          cell.vx *= 0.3; cell.vy *= 0.3;
           const perpX = -ny, perpY = nx;
           const spreadForce = speed * 0.3;
-          // Push to both sides
           for (const side of [-1, 1]) {
             const sgx = gx + Math.round(perpX * side);
             const sgy = gy + Math.round(perpY * side);
@@ -833,10 +1175,9 @@ function updateSnowPhysics(dt) {
               const sideRoom = pileMax - snow[sgy][sgx].depth;
               if (sideRoom > 0.001) {
                 const sideMove = Math.min(moveAmount * 0.15, sideRoom, cell.depth * 0.1);
-                if (sideMove > 0.001) {
+                if (sideMove > 0.001)
                   transfers.push({ fromX:gx, fromY:gy, toX:sgx, toY:sgy, amount:sideMove, edge:false,
                     vx: perpX * side * spreadForce * 0.3, vy: perpY * side * spreadForce * 0.3 });
-                }
               }
             }
           }
@@ -849,65 +1190,50 @@ function updateSnowPhysics(dt) {
   for (const t of transfers) {
     snow[t.fromY][t.fromX].depth -= t.amount;
     if (snow[t.fromY][t.fromX].depth < 0) snow[t.fromY][t.fromX].depth = 0;
-
     if (t.edge) {
-      // MONEY! Snow pushed off screen
       const st2 = currentSnowType();
       const basePayment = t.amount * area.payPerUnit * st2.value * 10;
       const comboPayment = basePayment * game.combo;
       earnMoney(comboPayment, t.screenX, t.screenY - 15);
       game.volumeThisStorm += t.amount * 10;
       game.totalVolumePushed += t.amount * 10;
-
-      // Combo boost
       game.comboTimer = 0;
       game.combo = Math.min(10, game.combo + 0.15);
       game.maxCombo = Math.max(game.maxCombo, game.combo);
-
-      // Edge glow
       game.edgeGlow[t.edgeSide] = Math.min(1, game.edgeGlow[t.edgeSide] + t.amount * 3);
-
-      // Particles at edge
       emitEdgeBurst(t.screenX, t.screenY, 3);
       if (Math.random() < 0.3) playSound('edgeclear', 0.06 + t.amount * 0.1);
     } else {
-      // Transfer snow to target cell — PILE IT UP
       snow[t.toY][t.toX].depth += t.amount;
-      // Momentum carries through the pile (chain pushing)
       const target = snow[t.toY][t.toX];
-      target.vx = target.vx * 0.5 + t.vx * 0.5; // 50/50 blend (was 60/40 favoring stationary)
+      target.vx = target.vx * 0.5 + t.vx * 0.5;
       target.vy = target.vy * 0.5 + t.vy * 0.5;
     }
   }
 
-  // 4. APPLY FRICTION — snow slows down over time
+  // 4. FRICTION
   for (let gy = 0; gy < gh; gy++) {
     for (let gx = 0; gx < gw; gx++) {
       const cell = snow[gy][gx];
       const frictionRate = Math.pow(st.friction, dt * 60);
-      cell.vx *= frictionRate;
-      cell.vy *= frictionRate;
+      cell.vx *= frictionRate; cell.vy *= frictionRate;
       if (Math.abs(cell.vx) < 0.05) cell.vx = 0;
       if (Math.abs(cell.vy) < 0.05) cell.vy = 0;
     }
   }
 
-  // 4. COMBO DECAY
+  // COMBO DECAY
   game.comboTimer += dt;
   if (game.comboTimer > game.comboDecay) {
     game.combo = Math.max(1, game.combo - dt * 0.8);
   }
-
-  // Update combo display
   const comboEl = document.getElementById('comboDisplay');
   if (game.combo > 1.2) {
     comboEl.textContent = `x${game.combo.toFixed(1)}`;
     comboEl.style.opacity = '1';
     comboEl.style.fontSize = `${24 + game.combo * 4}px`;
     comboEl.style.color = game.combo > 5 ? '#ff6644' : game.combo > 3 ? '#ffcc44' : '#88ccff';
-  } else {
-    comboEl.style.opacity = '0';
-  }
+  } else { comboEl.style.opacity = '0'; }
 
   // Edge glow decay
   for (const side of ['top','bottom','left','right']) {
@@ -915,16 +1241,11 @@ function updateSnowPhysics(dt) {
     if (game.edgeGlow[side] < 0.01) game.edgeGlow[side] = 0;
   }
 
-  // Calculate clearance percentage (based on cells with snow, not total depth)
-  // This way piled snow doesn't make clearance % worse — it's about clear ground
+  // Calculate clearance
   let cellsWithSnow = 0;
-  let totalSnow = 0;
-  for (let gy = 0; gy < gh; gy++) {
-    for (let gx = 0; gx < gw; gx++) {
-      totalSnow += snow[gy][gx].depth;
+  for (let gy = 0; gy < gh; gy++)
+    for (let gx = 0; gx < gw; gx++)
       if (snow[gy][gx].depth > 0.05) cellsWithSnow++;
-    }
-  }
   game.cleared = game.totalCells > 0 ? 1 - (cellsWithSnow / game.totalCells) : 1;
 }
 
@@ -940,31 +1261,25 @@ function updatePlayer(dt) {
     game.playerY += (dy/dist) * m;
   }
 }
-
 // ═══ DRAW SNOW GRID ═══
 function drawSnowGrid() {
   const snow = game.snow, cs = game.cellSize, ox = game.offsetX, oy = game.offsetY;
   const area = currentArea();
   const st = currentSnowType();
 
-  // Ground
   ctx.fillStyle = '#1a2030';
   ctx.beginPath(); ctx.roundRect(ox-4, oy-4, game.snowGridW*cs+8, game.snowGridH*cs+8, 6); ctx.fill();
   ctx.fillStyle = '#1e2438';
   ctx.beginPath(); ctx.roundRect(ox, oy, game.snowGridW*cs, game.snowGridH*cs, 4); ctx.fill();
 
-  // Snow cells — color based on snow type, brightness based on depth
-  // Depth is now relative to pileMax (3x snowDepthMax) for pile visualization
   const pileMax = area.snowDepthMax * 3.0;
   for (let gy = 0; gy < game.snowGridH; gy++) {
     for (let gx = 0; gx < game.snowGridW; gx++) {
       const cell = snow[gy][gx];
       if (cell.depth > 0.01) {
         const x = ox + gx*cs, y = oy + gy*cs;
-        const normDepth = cell.depth / area.snowDepthMax; // 1.0 = normal full, can go to 3.0
+        const normDepth = cell.depth / area.snowDepthMax;
         const displayDepth = Math.min(normDepth, 3.0);
-
-        // Base color intensifies with depth
         const r = Math.min(255, st.color.r + displayDepth * 20);
         const g2 = Math.min(255, st.color.g + displayDepth * 15);
         const b = Math.min(255, st.color.b + displayDepth * 10);
@@ -972,30 +1287,24 @@ function drawSnowGrid() {
         ctx.fillStyle = `rgba(${Math.round(r)},${Math.round(g2)},${Math.round(b)},${alpha})`;
         ctx.fillRect(x, y, cs, cs);
 
-        // Snow height effect — piled snow appears to "rise" with shadow
         if (normDepth > 1.0 && cs > 6) {
-          // Highlight on top of pile (brighter = taller)
           const pileIntensity = Math.min(1, (normDepth - 1.0) / 2.0);
           ctx.fillStyle = `rgba(255,255,255,${pileIntensity * 0.3})`;
           ctx.fillRect(x + 1, y + 1, cs - 2, cs * 0.4);
-          // Shadow at bottom of pile
           ctx.fillStyle = `rgba(0,10,30,${pileIntensity * 0.25})`;
           ctx.fillRect(x + 1, y + cs * 0.7, cs - 2, cs * 0.3);
         }
 
-        // Snow texture for medium+ depth
         if (normDepth > 0.4 && cs > 8) {
           ctx.fillStyle = `rgba(255,255,255,${Math.min(0.35, displayDepth*0.15)})`;
           const h = (gx*7+gy*13) % 5;
           ctx.fillRect(x+h, y+(h+2)%cs, 2, 2);
-          // Extra sparkle on deep piles
           if (normDepth > 1.5) {
             ctx.fillStyle = `rgba(255,255,255,${0.15 + Math.sin(Date.now()*0.003 + gx + gy) * 0.1})`;
             ctx.fillRect(x + (gx*3+gy*5)%cs, y + (gx*11+gy*7)%cs, 1, 1);
           }
         }
 
-        // Velocity indicator — show movement direction on moving snow
         const speed = Math.sqrt(cell.vx*cell.vx + cell.vy*cell.vy);
         if (speed > 0.5 && cs > 6) {
           const alpha2 = Math.min(0.6, speed * 0.1);
@@ -1009,12 +1318,10 @@ function drawSnowGrid() {
           ctx.stroke();
         }
 
-        // Warning tint — really deep piles glow warm
         if (normDepth > 2.0) {
           ctx.fillStyle = `rgba(255,180,80,${(normDepth-2.0)*0.15})`;
           ctx.fillRect(x, y, cs, cs);
         } else if (normDepth > 1.2) {
-          // Subtle blue tint for piled snow
           ctx.fillStyle = `rgba(100,150,255,${(normDepth-1.2)*0.08})`;
           ctx.fillRect(x, y, cs, cs);
         }
@@ -1029,30 +1336,26 @@ function drawSnowGrid() {
   ctx.strokeStyle = 'rgba(100,180,255,0.15)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(ox-4, oy-4, game.snowGridW*cs+8, game.snowGridH*cs+8, 6); ctx.stroke();
 
-  // Edge glow effects — shows where snow is exiting
+  // Edge glow effects
   const gridW = game.snowGridW * cs, gridH = game.snowGridH * cs;
-  // Top edge
   if (game.edgeGlow.top > 0.01) {
     const grad = ctx.createLinearGradient(ox, oy, ox, oy + 20);
     grad.addColorStop(0, `rgba(100,255,180,${game.edgeGlow.top * 0.6})`);
     grad.addColorStop(1, 'rgba(100,255,180,0)');
     ctx.fillStyle = grad; ctx.fillRect(ox, oy, gridW, 20);
   }
-  // Bottom edge
   if (game.edgeGlow.bottom > 0.01) {
     const grad = ctx.createLinearGradient(ox, oy+gridH-20, ox, oy+gridH);
     grad.addColorStop(0, 'rgba(100,255,180,0)');
     grad.addColorStop(1, `rgba(100,255,180,${game.edgeGlow.bottom * 0.6})`);
     ctx.fillStyle = grad; ctx.fillRect(ox, oy+gridH-20, gridW, 20);
   }
-  // Left edge
   if (game.edgeGlow.left > 0.01) {
     const grad = ctx.createLinearGradient(ox, oy, ox+20, oy);
     grad.addColorStop(0, `rgba(100,255,180,${game.edgeGlow.left * 0.6})`);
     grad.addColorStop(1, 'rgba(100,255,180,0)');
     ctx.fillStyle = grad; ctx.fillRect(ox, oy, 20, gridH);
   }
-  // Right edge
   if (game.edgeGlow.right > 0.01) {
     const grad = ctx.createLinearGradient(ox+gridW-20, oy, ox+gridW, oy);
     grad.addColorStop(0, 'rgba(100,255,180,0)');
@@ -1068,7 +1371,6 @@ function drawPlayer() {
   const cs = game.cellSize;
 
   if (game.mouseDown) {
-    // Draw blow cone visual
     const reach = tool.reach * game.efficiencyMult * cs;
     const width = tool.width * game.efficiencyMult * cs;
     const blowDx = game.mouseX - px, blowDy = game.mouseY - py;
@@ -1076,23 +1378,16 @@ function drawPlayer() {
     if (blowDist > 5) {
       const nx = blowDx/blowDist, ny = blowDy/blowDist;
       const perpX = -ny, perpY = nx;
-
-      // Draw cone
       ctx.save();
       ctx.globalAlpha = 0.12;
       ctx.fillStyle = '#88ccff';
-      ctx.beginPath();
-      ctx.moveTo(px, py);
+      ctx.beginPath(); ctx.moveTo(px, py);
       const endW = width * 1.4;
       ctx.lineTo(px + nx*reach + perpX*endW, py + ny*reach + perpY*endW);
       ctx.lineTo(px + nx*reach - perpX*endW, py + ny*reach - perpY*endW);
-      ctx.closePath();
-      ctx.fill();
-
-      // Wind lines inside cone
+      ctx.closePath(); ctx.fill();
       ctx.globalAlpha = 0.15;
-      ctx.strokeStyle = '#aaddff';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#aaddff'; ctx.lineWidth = 1;
       for (let i = 0; i < 5; i++) {
         const t = performance.now()/1000;
         const offset = ((t * 2 + i * 0.4) % 1);
@@ -1108,16 +1403,19 @@ function drawPlayer() {
     }
   }
 
-  // Character
   ctx.fillStyle = '#ff6644'; ctx.beginPath(); ctx.arc(px, py-6, 6, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#cc4422'; ctx.fillRect(px-4, py, 8, 10);
-  // Tool in hand
   ctx.strokeStyle = '#888'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px+4, py+2);
   const ba = Math.atan2(game.mouseY - py, game.mouseX - px);
   ctx.lineTo(px+4+Math.cos(ba)*14, py+2+Math.sin(ba)*14); ctx.stroke();
-  // Tool icon above head
   ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(tool.icon, px, py - 18);
+  // "YOU" label to distinguish from workers
+  if (game.workers.some(w => w.assignedArea === game.areaIdx)) {
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillStyle = '#ff6644';
+    ctx.fillText('YOU', px, py - 28);
+  }
 }
 
 // ═══ TOOLTIP ═══
@@ -1126,7 +1424,6 @@ function showTooltip(text, dur=3) {
   const el = document.getElementById('tooltip');
   el.textContent = text; el.style.opacity = '1';
 }
-
 // ═══ HUD UPDATE ═══
 function updateHUD() {
   document.getElementById('hudMoney').textContent = '$' + game.money.toFixed(2);
@@ -1146,7 +1443,6 @@ function updateHUD() {
     document.getElementById('hudStorm').style.color = '#6090b0';
   }
 
-  // Snow type indicator
   if (game.stormActive) {
     const st = currentSnowType();
     document.getElementById('hudSnowType').textContent = st.icon + ' ' + st.name;
@@ -1158,6 +1454,7 @@ function updateHUD() {
 
   document.getElementById('hudVolume').textContent = game.totalVolumePushed.toFixed(0);
   document.getElementById('hudRate').textContent = '$' + currentArea().payPerUnit.toFixed(2) + '/unit';
+  updateCrewHUD();
 }
 
 // ═══ SHOP / BUSINESS HQ ═══
@@ -1170,16 +1467,25 @@ function showShop() {
   const tabBar = document.getElementById('shopTabs');
   tabBar.innerHTML = '';
   const tabs = [
-    { id:'tools', label:'🔧 Tools', icon:'🔧' },
-    { id:'weather', label:'🌨️ Weather', icon:'🌨️' },
-    { id:'efficiency', label:'⚡ Efficiency', icon:'⚡' },
-    { id:'areas', label:'📍 Clients', icon:'📍' },
+    { id:'tools', label:'🔧 Tools' },
+    { id:'weather', label:'🌨️ Weather' },
+    { id:'efficiency', label:'⚡ Efficiency' },
+    { id:'areas', label:'📍 Clients' },
   ];
+
+  // Phase 2: Staffing tab (unlocked when available)
+  if (game.phase2Unlocked) {
+    tabs.push({ id:'staffing', label:'👥 Staffing', isNew: game.workers.length === 0 });
+  }
+
   let activeTab = game._shopTab || 'tools';
+  // If tab doesn't exist (e.g. staffing not unlocked), default to tools
+  if (!tabs.find(t => t.id === activeTab)) activeTab = 'tools';
+
   for (const tab of tabs) {
     const btn = document.createElement('button');
-    btn.className = 'tab-btn' + (activeTab === tab.id ? ' active' : '');
-    btn.textContent = tab.label;
+    btn.className = 'tab-btn' + (activeTab === tab.id ? ' active' : '') + (tab.isNew ? ' tab-new' : '');
+    btn.textContent = tab.label + (tab.isNew ? ' ✨' : '');
     btn.onclick = () => { game._shopTab = tab.id; showShop(); playSound('click', 0.1); };
     tabBar.appendChild(btn);
   }
@@ -1191,6 +1497,7 @@ function showShop() {
   else if (activeTab === 'weather') buildWeatherShop(container);
   else if (activeTab === 'efficiency') buildEfficiencyShop(container);
   else if (activeTab === 'areas') buildAreaShop(container);
+  else if (activeTab === 'staffing') buildStaffingShop(container);
 
   const bottomClose = document.createElement('div');
   bottomClose.style.cssText = 'margin-top:16px;margin-bottom:20px;text-align:center';
@@ -1205,26 +1512,21 @@ function buildToolShop(container) {
   sec.innerHTML = '<h3>🔧 Clearing Tools — Push Snow Harder & Wider</h3>';
   const grid = document.createElement('div');
   grid.className = 'shop-grid';
-
   for (let i = 0; i < TOOLS.length; i++) {
     const t = TOOLS[i];
     const owned = game.ownedTools.includes(i);
     const equipped = game.currentTool === i;
     const canAfford = game.money >= t.cost;
-
     const item = document.createElement('div');
     item.className = 'shop-item panel' + (equipped ? ' owned' : (!owned && !canAfford ? ' locked' : ''));
-
     let priceHTML = '';
     if (equipped) priceHTML = '<div class="price">✅ EQUIPPED</div>';
     else if (owned) priceHTML = '<div class="price" style="color:#88ccff;cursor:pointer">▶ Equip</div>';
     else priceHTML = `<div class="price gold">${canAfford ? '' : '🔒 '}$${t.cost}</div>`;
-
     item.innerHTML = `<h4>${t.icon} ${t.name}</h4>
       <p>${t.desc}</p>
       <p style="color:#4a8a6a;font-size:10px">Force: ${t.force}x | Width: ${t.width}x | Reach: ${t.reach}x | Speed: ${t.speed}x</p>
       ${priceHTML}`;
-
     if (owned && !equipped) {
       item.onclick = () => { game.currentTool = i; playSound('click', 0.2); showShop(); };
     } else if (!owned && canAfford) {
@@ -1235,8 +1537,7 @@ function buildToolShop(container) {
     }
     grid.appendChild(item);
   }
-  sec.appendChild(grid);
-  container.appendChild(sec);
+  sec.appendChild(grid); container.appendChild(sec);
 }
 
 function buildWeatherShop(container) {
@@ -1245,33 +1546,25 @@ function buildWeatherShop(container) {
   sec.innerHTML = '<h3>🌨️ Weather Manipulation — Make It Snow More 😈</h3><p style="font-size:11px;color:#8866cc;margin:-4px 0 10px 4px">More snow = more to push off = more money. Also unlocks harder snow types!</p>';
   const grid = document.createElement('div');
   grid.className = 'shop-grid';
-
   for (const w of WEATHER_UPGRADES) {
     const owned = game.ownedWeather.includes(w.id);
     const canAfford = game.money >= w.cost;
-
     const item = document.createElement('div');
     item.className = 'shop-item panel' + (owned ? ' owned' : (!canAfford ? ' locked' : ''));
-
     item.innerHTML = `<h4>${w.icon} ${w.name}</h4>
       <p>${w.desc}</p>
       <p style="color:#8866cc;font-size:9px;font-style:italic">${w.flavor}</p>
       <p style="color:#4a6a8a;font-size:10px">+${(w.snowBoost*100).toFixed(0)}% snow | +${(w.stormChance*100).toFixed(0)}% storm chance</p>
       <div class="price ${owned ? '' : 'gold'}">${owned ? '✅ OWNED' : (canAfford ? '' : '🔒 ') + '$' + w.cost}</div>`;
-
     if (!owned && canAfford) {
       item.onclick = () => {
         game.money -= w.cost; game.ownedWeather.push(w.id);
-        calcWeatherPower();
-        playSound('upgrade', 0.4);
-        showTooltip(w.flavor, 3);
-        showShop();
+        calcWeatherPower(); playSound('upgrade', 0.4); showTooltip(w.flavor, 3); showShop();
       };
     }
     grid.appendChild(item);
   }
-  sec.appendChild(grid);
-  container.appendChild(sec);
+  sec.appendChild(grid); container.appendChild(sec);
 }
 
 function buildEfficiencyShop(container) {
@@ -1280,30 +1573,24 @@ function buildEfficiencyShop(container) {
   sec.innerHTML = '<h3>⚡ Efficiency Upgrades — Work Smarter</h3>';
   const grid = document.createElement('div');
   grid.className = 'shop-grid';
-
   for (const e of EFFICIENCY_UPGRADES) {
     const owned = game.ownedEfficiency.includes(e.id);
     const canAfford = game.money >= e.cost;
-
     const item = document.createElement('div');
     item.className = 'shop-item panel' + (owned ? ' owned' : (!canAfford ? ' locked' : ''));
-
     item.innerHTML = `<h4>${e.icon} ${e.name}</h4>
       <p>${e.desc}</p>
       <p style="color:#4a6a8a;font-size:10px">×${e.mult.toFixed(2)} multiplier</p>
       <div class="price ${owned ? '' : 'gold'}">${owned ? '✅ OWNED' : (canAfford ? '' : '🔒 ') + '$' + e.cost}</div>`;
-
     if (!owned && canAfford) {
       item.onclick = () => {
         game.money -= e.cost; game.ownedEfficiency.push(e.id);
-        calcEfficiency();
-        playSound('upgrade', 0.4); showShop();
+        calcEfficiency(); playSound('upgrade', 0.4); showShop();
       };
     }
     grid.appendChild(item);
   }
-  sec.appendChild(grid);
-  container.appendChild(sec);
+  sec.appendChild(grid); container.appendChild(sec);
 }
 
 function buildAreaShop(container) {
@@ -1312,7 +1599,6 @@ function buildAreaShop(container) {
   sec.innerHTML = '<h3>📍 Client Contracts — Bigger Areas, Better Pay</h3>';
   const grid = document.createElement('div');
   grid.className = 'shop-grid';
-
   for (let i = 0; i < AREAS.length; i++) {
     const a = AREAS[i];
     const unlocked = game.unlockedAreas.includes(i);
@@ -1320,25 +1606,25 @@ function buildAreaShop(container) {
     const canAfford = game.money >= a.unlockCost;
     const isNext = i === Math.max(...game.unlockedAreas) + 1;
     const available = !unlocked && isNext;
+    const workersHere = game.workers.filter(w => w.assignedArea === i).length;
 
     const item = document.createElement('div');
     item.className = 'shop-item panel' + (current ? ' owned' : (!unlocked && !available ? ' locked' : ''));
-
     let priceHTML = '';
     if (current) priceHTML = '<div class="price">📍 CURRENT</div>';
     else if (unlocked) priceHTML = '<div class="price" style="color:#88ccff;cursor:pointer">▶ Switch here</div>';
     else if (available) priceHTML = `<div class="price gold">${canAfford ? '' : '🔒 '}$${a.unlockCost}</div>`;
     else priceHTML = '<div class="price" style="color:#405060">🔒 Get previous contract first</div>';
 
+    const workerInfo = workersHere > 0 ? `<p style="color:#88ccff;font-size:10px">👥 ${workersHere} worker${workersHere>1?'s':''} assigned</p>` : '';
+
     item.innerHTML = `<h4>📍 ${a.name}</h4>
       <p>${a.desc}</p>
       <p style="color:#4a8a6a;font-size:10px">${a.gridW}×${a.gridH} area | $${a.payPerUnit.toFixed(2)}/unit</p>
+      ${workerInfo}
       ${priceHTML}`;
-
     if (unlocked && !current) {
-      item.onclick = () => {
-        initArea(i); playSound('click', 0.3); closeShop();
-      };
+      item.onclick = () => { initArea(i); playSound('click', 0.3); closeShop(); };
     } else if (available && canAfford) {
       item.onclick = () => {
         game.money -= a.unlockCost; game.unlockedAreas.push(i);
@@ -1348,10 +1634,184 @@ function buildAreaShop(container) {
     }
     grid.appendChild(item);
   }
-  sec.appendChild(grid);
-  container.appendChild(sec);
+  sec.appendChild(grid); container.appendChild(sec);
 }
+// ═══════════════════════════════════════
+// PHASE 2: STAFFING SHOP TAB
+// ═══════════════════════════════════════
 
+function buildStaffingShop(container) {
+  // Payroll banner at top
+  if (game.workers.length > 0) {
+    calcPayroll();
+    const banner = document.createElement('div');
+    const canPay = game.money >= game.totalPayroll;
+    const cyclesAffordable = game.totalPayroll > 0 ? Math.floor(game.money / game.totalPayroll) : 999;
+    const bannerClass = cyclesAffordable >= 5 ? 'payroll-ok' : cyclesAffordable >= 2 ? 'payroll-warning' : 'payroll-danger';
+    banner.className = 'payroll-banner ' + bannerClass;
+    banner.innerHTML = `<div>
+        <span style="font-size:14px;font-weight:600">💰 Payroll: $${game.totalPayroll}/storm cycle</span><br>
+        <span style="font-size:10px;opacity:0.7">${game.workers.length} employee${game.workers.length>1?'s':''} • Can cover ${cyclesAffordable} more cycle${cyclesAffordable!==1?'s':''}</span>
+      </div>
+      <div style="text-align:right">
+        <span style="font-size:11px">${cyclesAffordable >= 5 ? '✅ Healthy' : cyclesAffordable >= 2 ? '⚠️ Watch it' : '🚨 DANGER'}</span>
+      </div>`;
+    container.appendChild(banner);
+  }
+
+  // Hire section
+  const hireSec = document.createElement('div');
+  hireSec.className = 'shop-section';
+  hireSec.innerHTML = game.workers.length === 0
+    ? '<h3>👥 Hire Your First Employee</h3><p style="font-size:11px;color:#8866cc;margin:-4px 0 10px 4px">Time to grow! Hire workers to clear snow in areas you can\'t get to. They earn money for you — but you have to pay their salary every storm cycle. If you can\'t pay, they quit. 😬</p>'
+    : '<h3>👥 Hire More Staff</h3><p style="font-size:11px;color:#607890;margin:-4px 0 10px 4px">Each worker costs a hiring fee + ongoing salary per storm cycle.</p>';
+
+  const hireGrid = document.createElement('div');
+  hireGrid.className = 'shop-grid';
+
+  for (const tier of WORKER_TIERS) {
+    // Leads require at least 2 non-lead workers
+    if (tier.isLead && game.workers.filter(w => !WORKER_TIERS.find(t => t.id === w.tier)?.isLead).length < 2) continue;
+
+    const canAfford = game.money >= tier.hireCost;
+    const item = document.createElement('div');
+    item.className = 'shop-item panel' + (!canAfford ? ' locked' : '');
+
+    item.innerHTML = `<h4>${tier.icon} ${tier.name}</h4>
+      <p>${tier.desc}</p>
+      <p style="color:#4a6a8a;font-size:10px">Skill: ${Math.round(tier.skill*100)}% | Salary: $${tier.salary}/cycle</p>
+      <div class="price gold">${canAfford ? '' : '🔒 '}$${tier.hireCost} to hire</div>`;
+
+    if (canAfford) {
+      item.onclick = () => {
+        game.money -= tier.hireCost;
+        const worker = {
+          id: nextWorkerId++,
+          name: randomWorkerName(),
+          tier: tier.id,
+          morale: 75 + Math.random() * 25, // Start with decent morale
+          assignedArea: null,
+          earnings: 0,
+          stormsWorked: 0,
+        };
+        game.workers.push(worker);
+        calcPayroll();
+        playSound('hire', 0.4);
+        showTooltip(`🎉 ${worker.name} hired as ${tier.name}!`, 3);
+        showShop();
+      };
+    }
+    hireGrid.appendChild(item);
+  }
+  hireSec.appendChild(hireGrid);
+  container.appendChild(hireSec);
+
+  // Current workers section
+  if (game.workers.length > 0) {
+    const crewSec = document.createElement('div');
+    crewSec.className = 'shop-section';
+    crewSec.innerHTML = '<h3>📋 Your Team</h3>';
+
+    const crewGrid = document.createElement('div');
+    crewGrid.className = 'shop-grid';
+
+    for (const w of game.workers) {
+      const tier = WORKER_TIERS.find(t => t.id === w.tier);
+      if (!tier) continue;
+
+      const card = document.createElement('div');
+      card.className = 'worker-card panel';
+
+      const moralePct = w.morale / 100;
+      const moraleColor = moralePct > 0.6 ? '#44cc66' : moralePct > 0.3 ? '#cccc44' : '#cc4444';
+      const moraleLabel = moralePct > 0.8 ? 'Happy' : moralePct > 0.6 ? 'Content' : moralePct > 0.3 ? 'Unhappy' : 'Furious';
+
+      const assignedName = w.assignedArea !== null && w.assignedArea !== undefined
+        ? AREAS[w.assignedArea]?.name || 'Unknown'
+        : 'Unassigned';
+      const assignedColor = w.assignedArea !== null ? '#88ccff' : '#ff8866';
+
+      card.innerHTML = `
+        <div class="worker-header">
+          <div>
+            <div class="worker-name">${tier.icon} ${w.name}</div>
+            <div class="worker-role">${tier.name}</div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:#607890">
+            $${tier.salary}/cycle<br>
+            <span style="color:#66ddaa">Earned: $${(w.earnings||0).toFixed(0)}</span>
+          </div>
+        </div>
+        <div class="worker-stats">
+          📍 <span style="color:${assignedColor}">${assignedName}</span> • 
+          💪 ${moraleLabel} (${Math.round(w.morale)}%)
+        </div>
+        <div class="morale-bar"><div class="morale-fill" style="width:${w.morale}%;background:${moraleColor}"></div></div>
+        <div class="worker-actions" id="workerActions_${w.id}"></div>`;
+
+      crewGrid.appendChild(card);
+
+      // Add action buttons after DOM insertion
+      setTimeout(() => {
+        const actionsDiv = document.getElementById(`workerActions_${w.id}`);
+        if (!actionsDiv) return;
+
+        // Assign to area dropdown
+        for (let i = 0; i < AREAS.length; i++) {
+          if (!game.unlockedAreas.includes(i)) continue;
+          const a = AREAS[i];
+          const isAssigned = w.assignedArea === i;
+          const btn = document.createElement('button');
+          btn.className = 'btn' + (isAssigned ? ' btn-primary' : '');
+          btn.textContent = isAssigned ? `📍 ${a.name.split(' ')[0]}` : a.name.split(' ')[0];
+          btn.style.cssText = 'padding:3px 8px;font-size:9px;pointer-events:auto';
+          btn.onclick = () => {
+            w.assignedArea = isAssigned ? null : i;
+            // Reset worker position when reassigned
+            w.wx = undefined; w.wy = undefined; w.targetGx = -1;
+            playSound('click', 0.2);
+            showShop();
+          };
+          actionsDiv.appendChild(btn);
+        }
+
+        // Fire button
+        const fireBtn = document.createElement('button');
+        fireBtn.className = 'btn btn-danger';
+        fireBtn.textContent = '🚫 Fire';
+        fireBtn.style.cssText = 'padding:3px 8px;font-size:9px;pointer-events:auto;margin-left:auto';
+        fireBtn.onclick = () => {
+          const idx = game.workers.indexOf(w);
+          if (idx >= 0) game.workers.splice(idx, 1);
+          calcPayroll();
+          playSound('fired', 0.3);
+          showTooltip(`${w.name} has been let go.`, 2);
+          showShop();
+        };
+        actionsDiv.appendChild(fireBtn);
+      }, 0);
+    }
+
+    crewSec.appendChild(crewGrid);
+    container.appendChild(crewSec);
+  }
+
+  // Phase 2 tips
+  if (game.workers.length === 0) {
+    const tipSec = document.createElement('div');
+    tipSec.className = 'shop-section';
+    tipSec.style.cssText = 'text-align:center;padding:16px';
+    tipSec.innerHTML = `<div class="panel" style="max-width:500px;margin:0 auto">
+      <h4 style="color:#ffcc88;margin-bottom:8px">💡 Growing Your Business</h4>
+      <p style="font-size:11px;color:#607890;line-height:1.7">
+        Hire workers and assign them to client areas. They'll clear snow and earn money for you — even in areas you're not personally working.<br><br>
+        ⚠️ <span style="color:#ffcc88">But be careful:</span> You pay their salary every storm cycle. Hire too many too fast and you won't make payroll. They'll quit. And you'll be back to shoveling alone.<br><br>
+        🎯 <span style="color:#88ccff">Strategy:</span> Start with 1-2 rookies in your best-paying area. Build up savings, then expand.
+      </p>
+    </div>`;
+    container.appendChild(tipSec);
+  }
+}
 // ═══ MAIN GAME LOOP ═══
 let lastTime = performance.now();
 
@@ -1395,7 +1855,6 @@ function gameLoop(now) {
     } else {
       game.downtimeTimer -= dt;
 
-      // Slight snow melting during downtime
       for (let gy = 0; gy < game.snowGridH; gy++)
         for (let gx = 0; gx < game.snowGridW; gx++)
           if (game.snow[gy][gx].depth > 0)
@@ -1413,10 +1872,16 @@ function gameLoop(now) {
       }
     }
 
-    // Core snow physics runs always during playing state
+    // Core physics
     updateSnowPhysics(dt);
 
+    // Phase 2: Worker AI
+    if (game.workers.length > 0) {
+      updateWorkerAI(dt);
+    }
+
     drawSnowGrid();
+    drawWorkers();  // Draw workers BEFORE player so player appears on top
     drawPlayer();
     updateHUD();
     updateMoneyPops(dt);
@@ -1425,6 +1890,15 @@ function gameLoop(now) {
     if (game.stormActive) {
       ctx.fillStyle = `rgba(150,170,220,${game.stormIntensity * 0.04})`;
       ctx.fillRect(0, 0, W, H);
+    }
+
+    // Check Phase 2 availability (in case it unlocks mid-game)
+    if (!game.phase2Unlocked && isPhase2Available()) {
+      game.phase2Unlocked = true;
+      if (!game.phase2Announced) {
+        game.phase2Announced = true;
+        showNotification('🎉 Staffing tab unlocked in Business HQ! Time to hire your first employee!', 'good', 8);
+      }
     }
   }
 
@@ -1451,6 +1925,11 @@ document.getElementById('btnStart').onclick = () => {
   game.combo = 1; game.comboTimer = 0; game.maxCombo = 1;
   game.moneyPops = [];
   game.edgeGlow = { top:0, bottom:0, left:0, right:0 };
+  // Phase 2 reset
+  game.phase2Unlocked = false; game.phase2Announced = false;
+  game.workers = []; game.totalPayroll = 0;
+  game.payrollHistory = []; game.workerEarnings = {};
+  nextWorkerId = 1;
   particles.length = 0;
   document.getElementById('startScreen').style.display = 'none';
   initArea(0);
