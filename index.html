@@ -285,27 +285,27 @@ function drawBackground(t) {
 // ═══ STAGE DEFINITIONS ═══
 // Each stage is a "contract" you accept. Bigger contracts = more money, more challenge.
 const STAGES = [
-  { name:'Front Porch', gridW:14, gridH:10, tool:'Leaf Blower', snowRate:0.15, payPerCell:2,
+  { name:'Front Porch', gridW:14, gridH:10, tool:'Leaf Blower', snowRate:0.15, payRate:3,
     unlockCost:0, mode:'direct',
-    desc:'Your first gig. Mrs. Henderson\'s porch. Prove yourself.' },
-  { name:'Sidewalk', gridW:20, gridH:12, tool:'Leaf Blower', snowRate:0.25, payPerCell:3,
+    desc:'Your first gig. Mrs. Henderson\'s porch. Keep it clear, get paid.' },
+  { name:'Sidewalk', gridW:20, gridH:12, tool:'Leaf Blower', snowRate:0.25, payRate:6,
     unlockCost:80, mode:'direct',
-    desc:'Word got around. The HOA wants their sidewalk cleared daily.' },
-  { name:'Driveway', gridW:26, gridH:16, tool:'Power Blower', snowRate:0.4, payPerCell:4,
+    desc:'HOA contract. They pay by the hour — as long as the walk stays clear.' },
+  { name:'Driveway', gridW:26, gridH:16, tool:'Power Blower', snowRate:0.4, payRate:12,
     unlockCost:250, mode:'direct',
-    desc:'Time to buy a power blower. The Johnsons\' triple-wide driveway awaits.' },
-  { name:'Parking Lot', gridW:34, gridH:22, tool:'Snow Blower', snowRate:0.6, payPerCell:5,
+    desc:'The Johnsons need their driveway clear for the morning commute. Every morning.' },
+  { name:'Parking Lot', gridW:34, gridH:22, tool:'Snow Blower', snowRate:0.6, payRate:22,
     unlockCost:600, mode:'direct',
-    desc:'Commercial contract! The FrostMart parking lot. Big money.' },
-  { name:'Main Street', roadCount:10, tool:'Plow Truck', snowRate:0.8, payPerCell:8,
+    desc:'Commercial contract. FrostMart pays well, but 60 spaces is a lot to maintain.' },
+  { name:'Main Street', roadCount:10, tool:'Plow Truck', snowRate:0.8, payRate:40,
     unlockCost:1500, mode:'plow',
-    desc:'City contract. They\'re giving you a plow truck. Keep Main Street moving.' },
-  { name:'Frostville', districts:6, tool:'Fleet Manager', snowRate:1.0, payPerCell:12,
+    desc:'City contract. Keep the roads clear, collect your check. Let snow pile up, lose it.' },
+  { name:'Frostville', districts:6, tool:'Fleet Manager', snowRate:1.0, payRate:70,
     unlockCost:3500, mode:'manage',
-    desc:'You\'re the boss now. Six districts, your crews, your call.' },
-  { name:'Arctic Region', cities:4, tool:'Regional Director', snowRate:0.8, payPerCell:20,
+    desc:'Six districts paying you to keep them happy. Snow means complaints.' },
+  { name:'Arctic Region', cities:4, tool:'Regional Director', snowRate:0.8, payRate:120,
     unlockCost:8000, mode:'logistics',
-    desc:'Four cities under your command. The Arctic depends on you.' },
+    desc:'Four cities. Massive budget. But if snow piles up, you\'re fired.' },
 ];
 
 // ═══ UPGRADES ═══
@@ -320,7 +320,7 @@ const UPGRADES = [
     effect: lvl => 1 + lvl * 0.3 },
   { id:'crews', name:'Hire Crew', desc:'+1 crew member', baseCost:400, maxLvl:4, icon:'👷',
     effect: lvl => lvl },
-  { id:'antisnow', name:'De-Icer', desc:'Slows snow buildup 20%', baseCost:150, maxLvl:3, icon:'🧪',
+  { id:'antisnow', name:'De-Icer', desc:'20% less snowfall = easier to maintain income', baseCost:150, maxLvl:3, icon:'🧪',
     effect: lvl => 1 - lvl * 0.2 },
 ];
 
@@ -340,10 +340,11 @@ const game = {
   // Input
   mouseX:0, mouseY:0, mouseDown:false,
   // Juice
-  screenShake:0, comboTimer:0, comboCount:0,
+  screenShake:0,
   tooltipTimer:0,
-  // Money tracking
-  moneyThisSecond:0, moneyRateDisplay:0, moneyRateTimer:0,
+  // Money tracking — passive income based on clearance
+  moneyThisSecond:0,
+  incomeAccum:0, // accumulates fractional $ between ticks
   // Money pops
   moneyPops:[],
 };
@@ -385,11 +386,27 @@ function drawMoneyPops() {
 }
 
 function earnMoney(amount, x, y) {
-  const final = Math.ceil(amount * upFx('income'));
+  const final = Math.ceil(amount);
   game.money += final;
   game.totalEarned += final;
   game.moneyThisSecond += final;
   if (x !== undefined) addMoneyPop(x, y, final);
+}
+
+// Passive income: you get paid based on how clear your area is
+function tickPassiveIncome(dt) {
+  const s = STAGES[game.stage];
+  // Income = payRate × clearance% × income upgrade multiplier
+  const incomePerSec = s.payRate * game.cleared * upFx('income');
+  game.incomeAccum += incomePerSec * dt;
+  // Pay out whole dollars
+  if (game.incomeAccum >= 1) {
+    const payout = Math.floor(game.incomeAccum);
+    game.incomeAccum -= payout;
+    game.money += payout;
+    game.totalEarned += payout;
+    game.moneyThisSecond += payout;
+  }
 }
 
 
@@ -398,7 +415,7 @@ function initStage(idx) {
   const s = STAGES[idx];
   game.stage = idx;
   game.stageTime = 0; game.cleared = 0;
-  game.screenShake = 0; game.comboCount = 0; game.comboTimer = 0;
+  game.screenShake = 0; game.incomeAccum = 0;
   game.moneyPops = [];
   particles.length = 0;
 
@@ -462,10 +479,8 @@ function updatePlow(dt, s) {
     const spd=game.plowSpeed*upFx('speed');
     if(dist<spd*dt){
       if(r.snow>0.1){
-        const cleared=r.snow;
         r.snow=Math.max(0,r.snow-0.6*upFx('power'));
         if(r.snow<0.15)r.snow=0;
-        earnMoney(Math.floor(cleared*s.payPerCell*5),game.plowX,game.plowY);
         emitSnow(game.plowX,game.plowY,Math.atan2(dy,dx),15,80);
         playSound('blow',0.2);game.screenShake=3;
       }
@@ -480,7 +495,7 @@ function updatePlow(dt, s) {
           const amt=1.5*upFx('power')*dt;
           if(road.snow>0){
             const b=road.snow;road.snow=Math.max(0,road.snow-amt);
-            if(b-road.snow>0.01)earnMoney(Math.ceil(s.payPerCell*(b-road.snow)*3));
+            // No per-clear income — passive income from clearance %
             if(Math.random()<0.2)emitSnow(game.plowX,game.plowY,Math.atan2(game.plowY-py,game.plowX-px),3,50);
           }
         }
@@ -567,8 +582,7 @@ function updateManage(dt, s) {
     d.snow=Math.min(1,d.snow+s.snowRate*snowMult*dt*0.015*(0.5+Math.random()*0.5));
     if(d.crew>0){
       const rate=0.15*d.crew*upFx('power')*dt;
-      const before=d.snow;d.snow=Math.max(0,d.snow-rate);
-      if(before-d.snow>0.001)earnMoney(Math.ceil((before-d.snow)*s.payPerCell*8));
+      d.snow=Math.max(0,d.snow-rate);
     }
     if(d.snow>0.7)d.satisfaction=Math.max(0,d.satisfaction-8*dt);
     else if(d.snow<0.3)d.satisfaction=Math.min(100,d.satisfaction+3*dt);
@@ -624,7 +638,7 @@ function updateDirect(dt, stage) {
     const radius=(2.0+upFx('radius')*0.6)*cs;
     const power=2.5*upFx('power');
     const px=game.playerX, py=game.playerY;
-    let clearedAny=false, earnedBatch=0;
+    let clearedAny=false;
 
     for(let gy=0;gy<game.snowGridH;gy++){
       for(let gx=0;gx<game.snowGridW;gx++){
@@ -636,25 +650,16 @@ function updateDirect(dt, stage) {
           const clearAmt=power*falloff*dt;
           const before=snow[gy][gx];
           snow[gy][gx]=Math.max(0,snow[gy][gx]-clearAmt);
-          const cleared = before - snow[gy][gx];
-          if(cleared > 0.01) {
-            earnedBatch += cleared * stage.payPerCell;
-            if(Math.random()<0.1)emitSnow(cx,cy,Math.atan2(cy-py,cx-px),2,40+power*15);
-          }
-          if(before>0 && snow[gy][gx]<=0){
-            emitSparkle(cx,cy,4);clearedAny=true;
-            game.comboCount++;game.comboTimer=1.5;
-          }
+          if(before-snow[gy][gx]>0.01&&Math.random()<0.1)
+            emitSnow(cx,cy,Math.atan2(cy-py,cx-px),2,40+power*15);
+          if(before>0&&snow[gy][gx]<=0){emitSparkle(cx,cy,4);clearedAny=true;}
         }
       }
     }
 
-    if(earnedBatch>0) earnMoney(Math.ceil(earnedBatch), game.playerX, game.playerY - 20);
     if(Math.random()<0.3)playSound('blow',0.06);
-    if(clearedAny)game.screenShake=Math.min(5,game.screenShake+1.5);
+    if(clearedAny)game.screenShake=Math.min(4,game.screenShake+1);
   }
-
-  if(game.comboTimer>0){game.comboTimer-=dt;if(game.comboTimer<=0)game.comboCount=0;}
 
   let totalSnow=0;
   for(let gy=0;gy<game.snowGridH;gy++)
@@ -710,15 +715,7 @@ function drawDirect() {
   const ba=Math.atan2(game.mouseY-py,game.mouseX-px);
   ctx.lineTo(px+4+Math.cos(ba)*14,py+2+Math.sin(ba)*14);ctx.stroke();
 
-  // Combo
-  if(game.comboCount>5){
-    ctx.save();ctx.globalAlpha=Math.min(1,game.comboTimer);
-    ctx.fillStyle='#66ddaa';ctx.font=`bold ${14+game.comboCount}px -apple-system,sans-serif`;
-    ctx.textAlign='center';ctx.fillText(`${game.comboCount}x COMBO!`,px,py-30);
-    if(game.comboCount>15){ctx.fillStyle='#ffcc44';ctx.font=`bold ${10+game.comboCount*0.3}px -apple-system,sans-serif`;
-      ctx.fillText('🔥 ON FIRE!',px,py-50);}
-    ctx.restore();
-  }
+
 }
 
 
@@ -734,13 +731,11 @@ function updateHUD() {
   document.getElementById('hudPercent').textContent=Math.round(game.cleared*100)+'%';
   document.getElementById('progressFill').style.width=(game.cleared*100)+'%';
 
-  // Money rate tracking
-  game.moneyRateTimer+=1/60;
-  if(game.moneyRateTimer>=1){
-    game.moneyRateDisplay=game.moneyThisSecond;
-    game.moneyThisSecond=0;game.moneyRateTimer=0;
-  }
-  document.getElementById('hudRate').textContent='$'+game.moneyRateDisplay+'/s';
+  // Show current income rate based on clearance
+  const s=STAGES[game.stage];
+  const currentRate=Math.floor(s.payRate*game.cleared*upFx('income'));
+  const maxRate=Math.floor(s.payRate*upFx('income'));
+  document.getElementById('hudRate').textContent='$'+currentRate+'/s (max $'+maxRate+')';
 }
 
 // ═══ SHOP / BUSINESS HQ ═══
@@ -780,7 +775,7 @@ function showShop() {
     else priceHTML='<div class="price" style="color:#405060">🔒 Complete previous first</div>';
 
     item.innerHTML=`<h4>${s.mode==='plow'?'🚛':s.mode==='manage'?'🏙️':s.mode==='logistics'?'🌐':'🌬️'} ${s.name}</h4>
-      <p>${s.desc}</p><p style="color:#4a6a8a;font-size:9px">Pays $${s.payPerCell}/cell</p>${priceHTML}`;
+      <p>${s.desc}</p><p style="color:#4a6a8a;font-size:9px">Pays up to $${s.payRate}/sec when clear</p>${priceHTML}`;
 
     if(unlocked&&!current){
       item.style.cursor='pointer';item.style.opacity='0.8';
@@ -876,6 +871,9 @@ function gameLoop(now) {
     if(s.mode==='direct'){updateDirect(dt,s);drawDirect();}
     else if(s.mode==='plow'){updatePlow(dt,s);drawPlow();}
     else if(s.mode==='manage'||s.mode==='logistics'){updateManage(dt,s);drawManage();}
+
+    // Passive income — you get paid for keeping things clear
+    tickPassiveIncome(dt);
 
     updateHUD();
     updateMoneyPops(dt);
