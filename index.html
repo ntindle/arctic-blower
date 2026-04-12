@@ -641,12 +641,13 @@ function accumulateSnow(dt) {
   }
 }
 
-// ═══ SNOW PHYSICS — THE CORE NEW MECHANIC ═══
+// ═══ SNOW PHYSICS — THE CORE MECHANIC ═══
 // Snow has velocity (vx, vy) per cell. Each frame:
-// 1. Apply player blow force to cells in range
-// 2. Move snow based on velocity (transfer between cells)
-// 3. Snow hitting edges = pushed off = PAID
-// 4. Apply friction to slow snow down
+// 1. Player body displacement — walking through snow pushes it aside
+// 2. Apply player blow force to cells in range
+// 3. Move snow based on velocity (transfer between cells, creating PILES)
+// 4. Snow hitting edges = pushed off = PAID
+// 5. Apply friction to slow snow down
 
 function updateSnowPhysics(dt) {
   const snow = game.snow;
@@ -655,8 +656,71 @@ function updateSnowPhysics(dt) {
   const tool = currentTool();
   const st = currentSnowType();
   const gw = game.snowGridW, gh = game.snowGridH;
+  const area = currentArea();
+  const pileMax = area.snowDepthMax * 3.0; // Snow can pile up to 3x normal — dramatic walls!
 
-  // 1. PLAYER BLOW FORCE
+  // 1. PLAYER BODY DISPLACEMENT — walking through snow pushes it in your direction
+  if (game.state === 'playing') {
+    const pgx = Math.floor((game.playerX - ox) / cs);
+    const pgy = Math.floor((game.playerY - oy) / cs);
+
+    // Push snow out of the cells the player occupies and adjacent cells
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const gx = pgx + dx, gy = pgy + dy;
+        if (gx < 0 || gx >= gw || gy < 0 || gy >= gh) continue;
+        const cell = snow[gy][gx];
+        if (cell.depth < 0.02) continue;
+
+        // How close is the player to this cell's center?
+        const cx = ox + gx * cs + cs / 2, cy = oy + gy * cs + cs / 2;
+        const distX = game.playerX - cx, distY = game.playerY - cy;
+        const dist = Math.sqrt(distX * distX + distY * distY);
+        const pushRadius = cs * 1.2;
+        if (dist > pushRadius) continue;
+
+        // Proximity factor: closer = stronger displacement
+        const proximity = 1 - dist / pushRadius;
+
+        // Determine push direction — away from player center
+        let pushNx, pushNy;
+        if (dist > 1) {
+          pushNx = -distX / dist;
+          pushNy = -distY / dist;
+        } else {
+          // Player is dead center on cell, push in movement direction
+          const mdx = game.mouseX - game.playerX, mdy = game.mouseY - game.playerY;
+          const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
+          if (mdist > 1) { pushNx = mdx/mdist; pushNy = mdy/mdist; }
+          else { pushNx = 0; pushNy = -1; }
+        }
+
+        // Displace snow — heavier snow resists body push more
+        const displacePower = (1.5 / st.weight) * proximity * dt * 60;
+        const displaceAmount = Math.min(cell.depth * 0.3, displacePower * 0.1);
+
+        if (displaceAmount > 0.001) {
+          // Add velocity to push snow away from player
+          cell.vx += pushNx * displacePower * 2.0;
+          cell.vy += pushNy * displacePower * 2.0;
+
+          // Direct displacement for immediate feedback
+          const tgx = gx + Math.round(pushNx);
+          const tgy = gy + Math.round(pushNy);
+          if (tgx >= 0 && tgx < gw && tgy >= 0 && tgy < gh) {
+            const move = Math.min(displaceAmount, cell.depth * 0.15);
+            cell.depth -= move;
+            snow[tgy][tgx].depth += move;
+            // Give the target cell some momentum too for chain piling
+            snow[tgy][tgx].vx += pushNx * 0.5;
+            snow[tgy][tgx].vy += pushNy * 0.5;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. PLAYER BLOW FORCE
   if (game.mouseDown && game.state === 'playing') {
     const px = game.playerX, py = game.playerY;
     const blowDx = game.mouseX - px, blowDy = game.mouseY - py;
@@ -667,7 +731,7 @@ function updateSnowPhysics(dt) {
 
       const reach = tool.reach * game.efficiencyMult * cs;
       const width = tool.width * game.efficiencyMult * cs;
-      const force = tool.force * game.efficiencyMult * 8.0; // cells/sec^2 base acceleration
+      const force = tool.force * game.efficiencyMult * 8.0;
 
       // Adjust force for snow type weight
       const effectiveForce = force / st.weight;
@@ -679,33 +743,26 @@ function updateSnowPhysics(dt) {
           if (snow[gy][gx].depth <= 0.01) continue;
           const cx = ox + gx*cs + cs/2, cy = oy + gy*cs + cs/2;
 
-          // Vector from player to cell
           const toCellX = cx - px, toCellY = cy - py;
           const cellDist = Math.sqrt(toCellX*toCellX + toCellY*toCellY);
           if (cellDist > reach) continue;
 
-          // Check if cell is within the blow cone
-          // Dot product for forward check, cross for width
-          const dot = (toCellX * blowNx + toCellY * blowNy); // forward distance
-          if (dot < 0) continue; // behind player
+          const dot = (toCellX * blowNx + toCellY * blowNy);
+          if (dot < 0) continue;
 
-          const cross = Math.abs(toCellX * blowNy - toCellY * blowNx); // perpendicular dist
-          // Width falls off with distance
+          const cross = Math.abs(toCellX * blowNy - toCellY * blowNx);
           const maxWidth = width * (0.3 + 0.7 * (dot / reach));
           if (cross > maxWidth) continue;
 
-          // Force falls off with distance
           const distFalloff = 1 - (cellDist / reach) * 0.6;
           const widthFalloff = 1 - (cross / maxWidth) * 0.5;
           const totalForce = effectiveForce * distFalloff * widthFalloff;
 
-          // Apply acceleration in blow direction
           snow[gy][gx].vx += blowNx * totalForce * dt;
           snow[gy][gx].vy += blowNy * totalForce * dt;
 
           anySnowHit = true;
 
-          // Visual particles
           if (Math.random() < 0.04 * tool.force) {
             emitSnow(cx, cy, game.blowAngle, 1, 30 + tool.force * 8);
           }
@@ -717,9 +774,8 @@ function updateSnowPhysics(dt) {
     }
   }
 
-  // 2. MOVE SNOW (transfer between cells based on velocity)
-  // We use a simple approach: each cell tries to push its snow in the direction of its velocity
-  // Create a transfer buffer to avoid order-dependent issues
+  // 3. MOVE SNOW — transfer between cells based on velocity, creating PILES
+  // More snow moves per frame = visible bulldozer effect
   const transfers = [];
   let edgeClearTotal = 0;
 
@@ -729,42 +785,61 @@ function updateSnowPhysics(dt) {
       if (cell.depth <= 0.01) { cell.vx = 0; cell.vy = 0; continue; }
 
       const speed = Math.sqrt(cell.vx * cell.vx + cell.vy * cell.vy);
-      if (speed < 0.1) continue;
+      if (speed < 0.08) continue;
 
-      // How much snow moves this frame
-      const moveAmount = Math.min(cell.depth, speed * dt * 0.5);
+      // How much snow moves — INCREASED for satisfying piling
+      // Faster snow = more moves. Deep snow moves more in bulk.
+      const speedFactor = Math.min(speed, 8) * dt * 1.2;
+      const depthFactor = 0.5 + cell.depth * 0.3; // deeper snow moves in bigger chunks
+      const moveAmount = Math.min(cell.depth * 0.7, speedFactor * depthFactor);
       if (moveAmount < 0.001) continue;
 
-      // Determine target cell(s) based on velocity direction
       const nx = cell.vx / speed, ny = cell.vy / speed;
 
-      // Target cell offset
       let tgx = gx + Math.round(nx);
       let tgy = gy + Math.round(ny);
 
       // CHECK EDGE EXIT — this is where you get PAID
       if (tgx < 0 || tgx >= gw || tgy < 0 || tgy >= gh) {
-        // Snow exits the grid! KA-CHING!
         transfers.push({ fromX:gx, fromY:gy, amount:moveAmount, edge:true,
           edgeSide: tgx < 0 ? 'left' : tgx >= gw ? 'right' : tgy < 0 ? 'top' : 'bottom',
           screenX: ox + gx*cs + cs/2, screenY: oy + gy*cs + cs/2 });
         edgeClearTotal += moveAmount;
       } else {
-        // Snow pushes into adjacent cell
-        // If target cell is full, snow slows down (compression)
+        // Snow pushes into adjacent cell — PILING UP!
         const targetDepth = snow[tgy][tgx].depth;
-        const area = currentArea();
-        const headroom = area.snowDepthMax * 1.5 - targetDepth; // allow some overfill
-        const actualMove = Math.min(moveAmount, Math.max(0, headroom));
+        const headroom = pileMax - targetDepth; // 3x max = dramatic walls
 
-        if (actualMove > 0.001) {
+        if (headroom > 0.001) {
+          const actualMove = Math.min(moveAmount, headroom);
+          // Momentum carries further for chain-piling effect
           transfers.push({ fromX:gx, fromY:gy, toX:tgx, toY:tgy, amount:actualMove, edge:false,
-            vx: cell.vx * 0.7, vy: cell.vy * 0.7 }); // transfer momentum (reduced)
+            vx: cell.vx * 0.85, vy: cell.vy * 0.85 }); // 85% momentum transfer (was 70%)
         }
-        // Snow hitting a full cell slows down
-        if (headroom < moveAmount * 0.5) {
-          cell.vx *= 0.5;
-          cell.vy *= 0.5;
+
+        // Compression: snow hitting a deep pile slows but also pushes SIDEWAYS
+        if (headroom < moveAmount * 0.3) {
+          // Pile is nearly full — snow slows down
+          cell.vx *= 0.3;
+          cell.vy *= 0.3;
+          // Spread sideways (perpendicular to velocity) for natural pile shape
+          const perpX = -ny, perpY = nx;
+          const spreadForce = speed * 0.3;
+          // Push to both sides
+          for (const side of [-1, 1]) {
+            const sgx = gx + Math.round(perpX * side);
+            const sgy = gy + Math.round(perpY * side);
+            if (sgx >= 0 && sgx < gw && sgy >= 0 && sgy < gh) {
+              const sideRoom = pileMax - snow[sgy][sgx].depth;
+              if (sideRoom > 0.001) {
+                const sideMove = Math.min(moveAmount * 0.15, sideRoom, cell.depth * 0.1);
+                if (sideMove > 0.001) {
+                  transfers.push({ fromX:gx, fromY:gy, toX:sgx, toY:sgy, amount:sideMove, edge:false,
+                    vx: perpX * side * spreadForce * 0.3, vy: perpY * side * spreadForce * 0.3 });
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -777,7 +852,6 @@ function updateSnowPhysics(dt) {
 
     if (t.edge) {
       // MONEY! Snow pushed off screen
-      const area = currentArea();
       const st2 = currentSnowType();
       const basePayment = t.amount * area.payPerUnit * st2.value * 10;
       const comboPayment = basePayment * game.combo;
@@ -797,22 +871,22 @@ function updateSnowPhysics(dt) {
       emitEdgeBurst(t.screenX, t.screenY, 3);
       if (Math.random() < 0.3) playSound('edgeclear', 0.06 + t.amount * 0.1);
     } else {
-      // Transfer snow to target cell
+      // Transfer snow to target cell — PILE IT UP
       snow[t.toY][t.toX].depth += t.amount;
-      // Transfer some momentum
-      snow[t.toY][t.toX].vx = (snow[t.toY][t.toX].vx * 0.6 + t.vx * 0.4);
-      snow[t.toY][t.toX].vy = (snow[t.toY][t.toX].vy * 0.6 + t.vy * 0.4);
+      // Momentum carries through the pile (chain pushing)
+      const target = snow[t.toY][t.toX];
+      target.vx = target.vx * 0.5 + t.vx * 0.5; // 50/50 blend (was 60/40 favoring stationary)
+      target.vy = target.vy * 0.5 + t.vy * 0.5;
     }
   }
 
-  // 3. APPLY FRICTION — snow slows down over time
+  // 4. APPLY FRICTION — snow slows down over time
   for (let gy = 0; gy < gh; gy++) {
     for (let gx = 0; gx < gw; gx++) {
       const cell = snow[gy][gx];
-      const frictionRate = Math.pow(st.friction, dt * 60); // normalize to ~60fps
+      const frictionRate = Math.pow(st.friction, dt * 60);
       cell.vx *= frictionRate;
       cell.vy *= frictionRate;
-      // Kill tiny velocities
       if (Math.abs(cell.vx) < 0.05) cell.vx = 0;
       if (Math.abs(cell.vy) < 0.05) cell.vy = 0;
     }
@@ -841,13 +915,17 @@ function updateSnowPhysics(dt) {
     if (game.edgeGlow[side] < 0.01) game.edgeGlow[side] = 0;
   }
 
-  // Calculate clearance percentage
+  // Calculate clearance percentage (based on cells with snow, not total depth)
+  // This way piled snow doesn't make clearance % worse — it's about clear ground
+  let cellsWithSnow = 0;
   let totalSnow = 0;
-  for (let gy = 0; gy < gh; gy++)
-    for (let gx = 0; gx < gw; gx++)
+  for (let gy = 0; gy < gh; gy++) {
+    for (let gx = 0; gx < gw; gx++) {
       totalSnow += snow[gy][gx].depth;
-  const maxPossibleSnow = game.totalCells * currentArea().snowDepthMax;
-  game.cleared = maxPossibleSnow > 0 ? 1 - (totalSnow / maxPossibleSnow) : 1;
+      if (snow[gy][gx].depth > 0.05) cellsWithSnow++;
+    }
+  }
+  game.cleared = game.totalCells > 0 ? 1 - (cellsWithSnow / game.totalCells) : 1;
 }
 
 // ═══ PLAYER MOVEMENT ═══
@@ -876,42 +954,68 @@ function drawSnowGrid() {
   ctx.beginPath(); ctx.roundRect(ox, oy, game.snowGridW*cs, game.snowGridH*cs, 4); ctx.fill();
 
   // Snow cells — color based on snow type, brightness based on depth
+  // Depth is now relative to pileMax (3x snowDepthMax) for pile visualization
+  const pileMax = area.snowDepthMax * 3.0;
   for (let gy = 0; gy < game.snowGridH; gy++) {
     for (let gx = 0; gx < game.snowGridW; gx++) {
       const cell = snow[gy][gx];
       if (cell.depth > 0.01) {
         const x = ox + gx*cs, y = oy + gy*cs;
-        const depth = cell.depth / area.snowDepthMax;
-        const r = st.color.r + depth * 30;
-        const g2 = st.color.g + depth * 20;
-        const b = Math.min(255, st.color.b + depth * 15);
-        ctx.fillStyle = `rgba(${r},${g2},${b},${0.3 + depth*0.65})`;
+        const normDepth = cell.depth / area.snowDepthMax; // 1.0 = normal full, can go to 3.0
+        const displayDepth = Math.min(normDepth, 3.0);
+
+        // Base color intensifies with depth
+        const r = Math.min(255, st.color.r + displayDepth * 20);
+        const g2 = Math.min(255, st.color.g + displayDepth * 15);
+        const b = Math.min(255, st.color.b + displayDepth * 10);
+        const alpha = Math.min(0.95, 0.3 + displayDepth * 0.3);
+        ctx.fillStyle = `rgba(${Math.round(r)},${Math.round(g2)},${Math.round(b)},${alpha})`;
         ctx.fillRect(x, y, cs, cs);
 
-        // Snow texture for deep snow
-        if (depth > 0.5 && cs > 8) {
-          ctx.fillStyle = `rgba(255,255,255,${depth*0.25})`;
+        // Snow height effect — piled snow appears to "rise" with shadow
+        if (normDepth > 1.0 && cs > 6) {
+          // Highlight on top of pile (brighter = taller)
+          const pileIntensity = Math.min(1, (normDepth - 1.0) / 2.0);
+          ctx.fillStyle = `rgba(255,255,255,${pileIntensity * 0.3})`;
+          ctx.fillRect(x + 1, y + 1, cs - 2, cs * 0.4);
+          // Shadow at bottom of pile
+          ctx.fillStyle = `rgba(0,10,30,${pileIntensity * 0.25})`;
+          ctx.fillRect(x + 1, y + cs * 0.7, cs - 2, cs * 0.3);
+        }
+
+        // Snow texture for medium+ depth
+        if (normDepth > 0.4 && cs > 8) {
+          ctx.fillStyle = `rgba(255,255,255,${Math.min(0.35, displayDepth*0.15)})`;
           const h = (gx*7+gy*13) % 5;
           ctx.fillRect(x+h, y+(h+2)%cs, 2, 2);
+          // Extra sparkle on deep piles
+          if (normDepth > 1.5) {
+            ctx.fillStyle = `rgba(255,255,255,${0.15 + Math.sin(Date.now()*0.003 + gx + gy) * 0.1})`;
+            ctx.fillRect(x + (gx*3+gy*5)%cs, y + (gx*11+gy*7)%cs, 1, 1);
+          }
         }
 
         // Velocity indicator — show movement direction on moving snow
         const speed = Math.sqrt(cell.vx*cell.vx + cell.vy*cell.vy);
         if (speed > 0.5 && cs > 6) {
-          const alpha = Math.min(0.6, speed * 0.1);
-          ctx.strokeStyle = `rgba(150,200,255,${alpha})`;
+          const alpha2 = Math.min(0.6, speed * 0.1);
+          ctx.strokeStyle = `rgba(150,200,255,${alpha2})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(x + cs/2, y + cs/2);
           const arrowLen = Math.min(cs * 0.8, speed * 2);
-          const nx = cell.vx / speed, ny = cell.vy / speed;
-          ctx.lineTo(x + cs/2 + nx * arrowLen, y + cs/2 + ny * arrowLen);
+          const nvx = cell.vx / speed, nvy = cell.vy / speed;
+          ctx.lineTo(x + cs/2 + nvx * arrowLen, y + cs/2 + nvy * arrowLen);
           ctx.stroke();
         }
 
-        // Danger tint for deep snow
-        if (depth > 0.8) {
-          ctx.fillStyle = `rgba(255,100,100,${(depth-0.8)*0.3})`;
+        // Warning tint — really deep piles glow warm
+        if (normDepth > 2.0) {
+          ctx.fillStyle = `rgba(255,180,80,${(normDepth-2.0)*0.15})`;
+          ctx.fillRect(x, y, cs, cs);
+        } else if (normDepth > 1.2) {
+          // Subtle blue tint for piled snow
+          ctx.fillStyle = `rgba(100,150,255,${(normDepth-1.2)*0.08})`;
           ctx.fillRect(x, y, cs, cs);
         }
       } else {
