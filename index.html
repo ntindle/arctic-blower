@@ -47,7 +47,6 @@ canvas{display:block;width:100%;height:100%}
 .shop-item p{font-size:10px;color:#607890;margin-bottom:6px;line-height:1.4}
 .shop-item .price{font-size:15px;font-weight:700;color:#66ddaa}
 .shop-item .price.gold{color:#ffcc44}
-
 #tooltip{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-size:13px;color:#6090b0;text-align:center;z-index:55;opacity:0;transition:opacity 0.5s;pointer-events:none;max-width:80%}
 .money-pop{position:absolute;pointer-events:none;font-weight:700;font-size:14px;color:#66ddaa;z-index:60;text-shadow:0 1px 4px rgba(0,0,0,0.5)}
 .storm-warning{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(24px,5vw,42px);font-weight:800;color:#aaccff;text-shadow:0 0 30px rgba(100,150,255,0.6);z-index:55;pointer-events:none;opacity:0;transition:opacity 0.5s}
@@ -55,6 +54,8 @@ canvas{display:block;width:100%;height:100%}
 .tab-btn{flex:1;padding:8px;border:1px solid rgba(100,180,255,0.2);background:rgba(20,30,50,0.5);color:#6090b0;border-radius:8px 8px 0 0;cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.2s;text-align:center}
 .tab-btn.active{background:rgba(30,50,80,0.8);color:#aaddff;border-color:rgba(100,180,255,0.4)}
 .tab-btn:hover{background:rgba(30,50,80,0.6)}
+#comboDisplay{position:absolute;top:50%;right:20px;transform:translateY(-50%);font-size:28px;font-weight:800;color:#ffcc44;text-shadow:0 0 20px rgba(255,200,50,0.5);pointer-events:none;opacity:0;transition:opacity 0.3s,font-size 0.15s;z-index:55}
+#snowTypeDisplay{position:absolute;top:70px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;pointer-events:none;opacity:0;transition:opacity 0.5s;z-index:55;text-align:center}
 </style>
 </head>
 <body>
@@ -65,6 +66,7 @@ canvas{display:block;width:100%;height:100%}
 <div class="hud-item">📍 <span id="hudArea">Front Porch</span></div>
 <div class="hud-item">🔧 <span id="hudTool">Snow Shovel</span></div>
 <div class="hud-item">🌨️ Storm: <span id="hudStorm">Calm</span></div>
+<div class="hud-item">❄️ Snow: <span id="hudSnowType">—</span></div>
 </div>
 <div class="hud-center">
 <div class="hud-item" style="font-size:11px"><span id="hudPercent">0%</span> cleared</div>
@@ -75,12 +77,14 @@ canvas{display:block;width:100%;height:100%}
 </div>
 <div class="hud-right" style="align-items:flex-end">
 <div class="hud-item" style="font-size:14px">💰 <span id="hudMoney" style="font-size:16px">$0</span></div>
-<div class="hud-item">📦 Volume: <span id="hudVolume">0</span></div>
+<div class="hud-item">📦 Pushed Off: <span id="hudVolume">0</span></div>
 <div class="hud-item">💵 Rate: <span id="hudRate">$0.50/unit</span></div>
 </div>
 </div>
 <div id="tooltip"></div>
 <div class="storm-warning" id="stormWarning">⛈️ STORM INCOMING! ⛈️</div>
+<div id="comboDisplay">x1</div>
+<div id="snowTypeDisplay"></div>
 </div>
 
 <div id="startScreen" style="display:flex">
@@ -88,14 +92,14 @@ canvas{display:block;width:100%;height:100%}
 <div class="subtitle">Snow Removal Empire Simulator</div>
 <div class="panel" style="text-align:center;max-width:420px">
 <p style="font-size:13px;color:#6090b0;line-height:1.7;margin-bottom:16px">
-Snow is your livelihood. More snow means more money.<br>
-Clear snow. Get paid by volume. Invest in better tools.<br>
-And maybe... make it snow a little more. 😈<br>
+Push snow OFF the edges to get paid. More snow = more money.<br>
+Different storms bring different snow — powder, packed, ice, slush.<br>
+Invest in better tools. And maybe... make it snow more. 😈<br>
 <span style="color:#8866cc;font-size:11px;margin-top:4px;display:inline-block">What? It's not illegal if nobody can prove it.</span>
 </p>
 <button class="btn btn-primary" id="btnStart" style="font-size:16px;padding:12px 40px">▶ START SHOVELING</button>
 </div>
-<div style="font-size:11px;color:#405060;margin-top:8px">Click & drag to clear snow • Get paid per unit cleared • Make it snow more 🌨️</div>
+<div style="font-size:11px;color:#405060;margin-top:8px">Click & hold to push snow • Push it OFF the edges to get paid • Pile it up for big payouts 💰</div>
 </div>
 
 <div id="shopScreen">
@@ -109,11 +113,14 @@ And maybe... make it snow a little more. 😈<br>
 </div>
 
 
-
 <script>
 // ════════════════════════════════════════════════════════
-// ARCTIC BLOWER v4 — "The Arsonist Firefighter of Winter"
+// ARCTIC BLOWER v5 — Push Snow Off-Screen + Snow Types
 // ════════════════════════════════════════════════════════
+// Core mechanic: Snow has MOMENTUM. You push it directionally.
+// Snow only counts as "cleared" when it exits the grid edge.
+// Different snow types have different weight/friction.
+// Pile snow up, herd it to edges, shove it off for big payouts.
 
 const C = document.getElementById('game');
 const ctx = C.getContext('2d');
@@ -193,6 +200,11 @@ function playSound(type, vol = 0.3) {
     src.connect(filt); filt.connect(g);
     g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(vol*0.3, now+0.8); g.gain.linearRampToValueAtTime(0, now+dur);
     src.start(now);
+  } else if (type === 'edgeclear') {
+    // Satisfying "whoosh-ching" when snow exits the edge
+    const o = audioCtx.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(600, now); o.frequency.exponentialRampToValueAtTime(1400, now+0.15);
+    o.connect(g); g.gain.exponentialRampToValueAtTime(0.01, now + 0.2); o.start(now); o.stop(now + 0.2);
   }
 }
 
@@ -208,7 +220,7 @@ class Particle {
   }
 }
 const particles = [];
-const MAX_P = 800;
+const MAX_P = 1000;
 
 function emitSnow(x,y,angle,count,force) {
   for (let i=0;i<count&&particles.length<MAX_P;i++) {
@@ -217,6 +229,14 @@ function emitSnow(x,y,angle,count,force) {
       Math.cos(a)*spd,Math.sin(a)*spd-Math.random()*30,
       0.4+Math.random()*0.7,2+Math.random()*4,
       `rgba(${200+Math.random()*55},${220+Math.random()*35},255,${0.5+Math.random()*0.4})`,'snowblow'));
+  }
+}
+function emitEdgeBurst(x,y,count) {
+  for (let i=0;i<count&&particles.length<MAX_P;i++) {
+    const a=Math.random()*Math.PI*2,spd=40+Math.random()*80;
+    particles.push(new Particle(x,y,Math.cos(a)*spd,Math.sin(a)*spd,
+      0.5+Math.random()*0.6,2+Math.random()*5,
+      `rgba(100,${200+Math.random()*55},${150+Math.random()*50},${0.6+Math.random()*0.3})`,'sparkle'));
   }
 }
 function emitSparkle(x,y,count) {
@@ -228,7 +248,6 @@ function emitSparkle(x,y,count) {
   }
 }
 function emitAmbient() {
-  // Ambient snowfall scales with storm intensity
   const stormMult = game.stormActive ? (1 + game.stormIntensity * 3) : 0.5;
   const chance = 0.15 * stormMult;
   if (particles.length < MAX_P && Math.random() < chance)
@@ -283,12 +302,11 @@ function drawStars(t) {
 }
 function drawBackground(t) {
   const g=ctx.createLinearGradient(0,0,0,H);
-  // Darken sky during storms
   if (game.stormActive) {
     const si = game.stormIntensity;
-    g.addColorStop(0,`rgb(${5-si*3},${8-si*4},${16-si*6})`);
-    g.addColorStop(0.4,`rgb(${10-si*5},${16-si*6},${32-si*10})`);
-    g.addColorStop(1,`rgb(${26-si*8},${37-si*10},${53-si*15})`);
+    g.addColorStop(0,`rgb(${Math.max(0,5-si*3)},${Math.max(0,8-si*4)},${Math.max(0,16-si*6)})`);
+    g.addColorStop(0.4,`rgb(${Math.max(0,10-si*5)},${Math.max(0,16-si*6)},${Math.max(0,32-si*10)})`);
+    g.addColorStop(1,`rgb(${Math.max(0,26-si*8)},${Math.max(0,37-si*10)},${Math.max(0,53-si*15)})`);
   } else {
     g.addColorStop(0,'#050810');g.addColorStop(0.4,'#0a1020');g.addColorStop(0.7,'#101828');g.addColorStop(1,'#1a2535');
   }
@@ -298,33 +316,50 @@ function drawBackground(t) {
 }
 
 // ═══════════════════════════════════════
-// GAME DESIGN: The Arsonist Firefighter
+// GAME DESIGN: Push Snow Off-Screen
 // ═══════════════════════════════════════
-// You're a snow removal person who secretly causes more snow.
-// Phase 1: Clear snow, get paid by VOLUME. Invest in:
-//   - Better clearing tools (shovel → leaf blower → power blower → plow)
-//   - Weather manipulation (make it snow MORE to generate more business)
-// The tension: more snow = more money BUT you must keep up or lose clients
-//
-// Storm cycle: Storm → Clear → Downtime (plan/upgrade) → Storm
-// Weather manipulation increases storm frequency & intensity
+// Snow has VELOCITY on each grid cell. When you blow, snow accelerates
+// in the blow direction. Snow transfers to adjacent cells. When snow
+// reaches a grid edge, it falls off and you get PAID.
+// Different snow types have different mass (harder to accelerate) and
+// friction (slows down faster).
+
+// ═══ SNOW TYPES ═══
+// Each storm picks a type. Heavier = harder to push = worth more.
+const SNOW_TYPES = [
+  { id:'powder', name:'Dry Powder', icon:'❄️', weight:0.6, friction:0.85, value:1.0,
+    color:{r:220,g:230,b:255}, desc:'Light and fluffy. Easy to push, blows everywhere.',
+    hint:'Fast but chaotic — careful it doesn\'t scatter!' },
+  { id:'packed', name:'Packed Snow', icon:'⛄', weight:1.0, friction:0.92, value:1.5,
+    color:{r:200,g:210,b:230}, desc:'Standard snowfall. Predictable, manageable.',
+    hint:'The bread and butter. Steady money.' },
+  { id:'wet', name:'Wet/Sticky Snow', icon:'💧', weight:1.4, friction:0.96, value:2.0,
+    color:{r:190,g:200,b:220}, desc:'Heavy and clumpy. Sticks together and resists pushing.',
+    hint:'Slow to move but piles up nicely.' },
+  { id:'ice', name:'Ice Crust', icon:'🧊', weight:1.8, friction:0.88, value:2.5,
+    color:{r:170,g:200,b:240}, desc:'Frozen solid. Takes serious force to break loose.',
+    hint:'Hard to start, but once moving it slides fast!' },
+  { id:'slush', name:'Slush', icon:'🌊', weight:2.0, friction:0.97, value:3.0,
+    color:{r:180,g:195,b:215}, desc:'Half-melted nightmare. Heavy, wet, and stubborn.',
+    hint:'The worst. But the pay is worth it.' },
+];
 
 // ═══ TOOL DEFINITIONS ═══
+// force = how fast snow accelerates, width = cells affected, reach = how far from player
 const TOOLS = [
-  { id:'shovel', name:'Snow Shovel', radius:1.2, power:1.0, speed:1.0, cost:0, icon:'🪣',
+  { id:'shovel', name:'Snow Shovel', force:1.0, width:1.5, reach:1.5, speed:1.0, cost:0, icon:'🪣',
     desc:'Humble beginnings. Back-breaking work, but it pays the bills.' },
-  { id:'leafblower', name:'Leaf Blower', radius:1.8, power:1.8, speed:1.2, cost:75, icon:'🌬️',
+  { id:'leafblower', name:'Leaf Blower', force:1.6, width:2.0, reach:2.2, speed:1.2, cost:75, icon:'🌬️',
     desc:'Not technically designed for snow. Works surprisingly well.' },
-  { id:'powerblower', name:'Power Blower', radius:2.4, power:3.0, speed:1.4, cost:300, icon:'💨',
+  { id:'powerblower', name:'Power Blower', force:2.8, width:2.8, reach:3.0, speed:1.4, cost:300, icon:'💨',
     desc:'Industrial grade. Your neighbors think you\'re insane.' },
-  { id:'snowblower', name:'Snow Blower', radius:3.2, power:5.0, speed:1.3, cost:800, icon:'🔧',
+  { id:'snowblower', name:'Snow Blower', force:4.5, width:3.5, reach:3.5, speed:1.3, cost:800, icon:'🔧',
     desc:'The real deal. You look semi-professional now.' },
-  { id:'plow', name:'Plow Truck', radius:4.5, power:9.0, speed:1.8, cost:2500, icon:'🚛',
+  { id:'plow', name:'Plow Truck', force:8.0, width:5.0, reach:4.5, speed:1.8, cost:2500, icon:'🚛',
     desc:'People actually take you seriously. Terrifying.' },
 ];
 
 // ═══ WEATHER MANIPULATION UPGRADES ═══
-// Escalates from desperate/funny to full sci-fi
 const WEATHER_UPGRADES = [
   { id:'prayer', name:'Pray for Snow', snowBoost:0.05, stormChance:0.02, cost:10, icon:'🙏',
     desc:'Stand outside and ask the sky nicely. Surprisingly, it seems to work?', flavor:'Faith-based meteorology.' },
@@ -344,97 +379,114 @@ const WEATHER_UPGRADES = [
     desc:'Orbital weather control platform. You ARE the weather now.', flavor:'God called. He wants his job back.' },
 ];
 
-// ═══ EFFICIENCY UPGRADES (make clearing faster) ═══
+// ═══ EFFICIENCY UPGRADES ═══
 const EFFICIENCY_UPGRADES = [
   { id:'eff_gloves', name:'Better Gloves', mult:1.15, cost:30, icon:'🧤',
-    desc:'+15% clearing speed. Your fingers will thank you.' },
+    desc:'+15% push force. Grip matters when you\'re shoving.' },
   { id:'eff_boots', name:'Snow Boots', mult:1.2, cost:80, icon:'🥾',
-    desc:'+20% movement speed. Grip matters.' },
+    desc:'+20% movement speed. Trudge faster through the drifts.' },
   { id:'eff_thermos', name:'Coffee Thermos', mult:1.15, cost:50, icon:'☕',
     desc:'+15% everything. Caffeine is a performance enhancer.' },
   { id:'eff_headlamp', name:'Headlamp', mult:1.1, cost:120, icon:'🔦',
-    desc:'+10% clearing speed. See what you\'re doing for once.' },
+    desc:'+10% push force. See what you\'re doing for once.' },
   { id:'eff_salt', name:'Rock Salt Supply', mult:1.25, cost:250, icon:'🧂',
-    desc:'+25% clearing power. Pre-treat like a pro.' },
+    desc:'+25% force on ice/slush. Pre-treat like a pro.' },
   { id:'eff_heated', name:'Heated Gear', mult:1.2, cost:500, icon:'🔥',
     desc:'+20% speed. Work longer, work faster. Never feel cold again.' },
 ];
 
 // ═══ CLIENT/AREA DEFINITIONS ═══
 const AREAS = [
-  { id:'porch', name:'Mrs. Henderson\'s Porch', gridW:12, gridH:8, payPerUnit:0.50, unlockCost:0,
+  { id:'porch', name:'Mrs. Henderson\'s Porch', gridW:14, gridH:10, payPerUnit:0.50, unlockCost:0,
     desc:'Your very first client. She pays per shovelful and bakes cookies.', snowDepthMax:1.0 },
-  { id:'sidewalk', name:'HOA Sidewalks', gridW:18, gridH:10, payPerUnit:0.75, unlockCost:100,
-    desc:'The HOA is very particular. Keep it CLEAR or lose the contract.', snowDepthMax:1.2 },
-  { id:'driveway', name:'Johnson Driveway', gridW:22, gridH:14, payPerUnit:1.00, unlockCost:300,
+  { id:'sidewalk', name:'HOA Sidewalks', gridW:20, gridH:12, payPerUnit:0.75, unlockCost:100,
+    desc:'The HOA is very particular. Push it ALL off or lose the contract.', snowDepthMax:1.2 },
+  { id:'driveway', name:'Johnson Driveway', gridW:24, gridH:16, payPerUnit:1.00, unlockCost:300,
     desc:'Two-car driveway. Must be clear by 7 AM or Mr. Johnson calls... the other guy.', snowDepthMax:1.5 },
-  { id:'parking', name:'FrostMart Parking Lot', gridW:30, gridH:18, payPerUnit:1.50, unlockCost:800,
+  { id:'parking', name:'FrostMart Parking Lot', gridW:32, gridH:20, payPerUnit:1.50, unlockCost:800,
     desc:'60 spaces. Commercial contract. Big money, big area.', snowDepthMax:2.0 },
-  { id:'mainstreet', name:'Main Street', gridW:36, gridH:22, payPerUnit:2.00, unlockCost:2000,
-    desc:'City contract. The whole downtown strip. You\'ve made it... or have you?', snowDepthMax:2.5 },
-  { id:'highway', name:'Highway 1 On-Ramp', gridW:42, gridH:26, payPerUnit:3.00, unlockCost:5000,
-    desc:'State contract. This is the big leagues. Don\'t let cars pile up.', snowDepthMax:3.0 },
+  { id:'mainstreet', name:'Main Street', gridW:38, gridH:24, payPerUnit:2.00, unlockCost:2000,
+    desc:'City contract. The whole downtown strip. You\'ve made it.', snowDepthMax:2.5 },
+  { id:'highway', name:'Highway 1 On-Ramp', gridW:44, gridH:28, payPerUnit:3.00, unlockCost:5000,
+    desc:'State contract. This is the big leagues.', snowDepthMax:3.0 },
 ];
 
 // ═══ GAME STATE ═══
 const game = {
-  state: 'menu', // menu, playing, storm_report, shop, downtime
+  state: 'menu',
   money: 0,
   totalEarned: 0,
-  totalVolumeCleared: 0,
+  totalVolumePushed: 0, // snow units pushed off screen
   stormsCompleted: 0,
 
   // Current area
   areaIdx: 0,
   unlockedAreas: [0],
 
-  // Snow grid
+  // Snow grid: each cell has { depth, vx, vy, type }
+  // depth = amount of snow, vx/vy = velocity (cells/sec)
   snow: null,
   snowGridW: 0, snowGridH: 0,
   cellSize: 0, offsetX: 0, offsetY: 0,
   totalCells: 0,
 
+  // Current storm snow type
+  snowType: 0, // index into SNOW_TYPES
+
   // Player
   playerX: 0, playerY: 0,
   mouseX: 0, mouseY: 0, mouseDown: false,
 
+  // Blow direction (from player toward mouse)
+  blowAngle: 0,
+
   // Tools
-  currentTool: 0, // index into TOOLS
-  ownedTools: [0], // indices
+  currentTool: 0,
+  ownedTools: [0],
 
   // Weather manipulation
-  ownedWeather: [], // ids of purchased weather upgrades
-  weatherPower: 0, // total snow boost from all weather upgrades
+  ownedWeather: [],
+  weatherPower: 0,
 
   // Efficiency
-  ownedEfficiency: [], // ids
+  ownedEfficiency: [],
   efficiencyMult: 1.0,
 
   // Storm system
   stormActive: false,
-  stormIntensity: 0, // 0-1, how hard it's snowing
-  stormTimer: 0, // seconds remaining in storm
-  stormDuration: 0, // total duration of this storm
-  downtimeTimer: 0, // seconds until next storm
-  downtimeDuration: 15, // planning time between storms
-  baseStormChance: 0.3, // base chance per cycle
+  stormIntensity: 0,
+  stormTimer: 0,
+  stormDuration: 0,
+  downtimeTimer: 0,
+  downtimeDuration: 15,
+  baseStormChance: 0.3,
   stormWarningShown: false,
 
   // Per-storm tracking
   volumeThisStorm: 0,
   moneyThisStorm: 0,
-  peakSnowDepth: 0,
+
+  // Combo system — rapid edge-clears build combo
+  combo: 1,
+  comboTimer: 0, // seconds since last edge clear
+  comboDecay: 2.5, // seconds until combo resets
+  maxCombo: 1,
+
+  // Edge glow effect
+  edgeGlow: { top:0, bottom:0, left:0, right:0 },
 
   // Visual juice
   screenShake: 0,
   tooltipTimer: 0,
   moneyPops: [],
+  cleared: 0, // percentage of grid that's clear
   _shopCooldown: false,
 };
 
 // ═══ HELPER FUNCTIONS ═══
 function currentTool() { return TOOLS[game.currentTool]; }
 function currentArea() { return AREAS[game.areaIdx]; }
+function currentSnowType() { return SNOW_TYPES[game.snowType]; }
 
 function calcWeatherPower() {
   let boost = 0, chance = 0;
@@ -491,7 +543,7 @@ function earnMoney(amount, x, y) {
   game.money += amount;
   game.totalEarned += amount;
   game.moneyThisStorm += amount;
-  if (x !== undefined && amount >= 0.25) addMoneyPop(x, y, amount);
+  if (x !== undefined && amount >= 0.10) addMoneyPop(x, y, amount);
 }
 
 // ═══ AREA INITIALIZATION ═══
@@ -504,10 +556,13 @@ function initArea(idx) {
   game.cellSize = Math.min((W - padX*2) / a.gridW, (H - padY*2) / a.gridH);
   game.offsetX = (W - a.gridW * game.cellSize) / 2;
   game.offsetY = (H - a.gridH * game.cellSize) / 2 + 20;
+  // Initialize snow grid — each cell: { depth, vx, vy }
   game.snow = [];
   for (let y = 0; y < a.gridH; y++) {
     game.snow[y] = [];
-    for (let x = 0; x < a.gridW; x++) game.snow[y][x] = 0;
+    for (let x = 0; x < a.gridW; x++) {
+      game.snow[y][x] = { depth: 0, vx: 0, vy: 0 };
+    }
   }
   game.totalCells = a.gridW * a.gridH;
   game.playerX = W / 2;
@@ -518,25 +573,36 @@ function initArea(idx) {
 }
 
 // ═══ STORM SYSTEM ═══
-// Storms build up, snow falls, you clear it and get paid by volume.
-// Between storms = downtime for shopping/planning.
-
 function startStorm() {
   game.stormActive = true;
-  // Duration: 20-45 seconds, modified by weather power (more power = longer storms = more money potential)
-  const baseDur = 20 + Math.random() * 15;
+  const baseDur = 25 + Math.random() * 15;
   game.stormDuration = baseDur * (1 + game.weatherPower * 0.5);
   game.stormTimer = game.stormDuration;
-  // Intensity: 0.3-0.8 base, boosted by weather manipulation
   game.stormIntensity = (0.3 + Math.random() * 0.5) * (1 + game.weatherPower);
-  game.stormIntensity = Math.min(game.stormIntensity, 1.5); // cap at 1.5x
+  game.stormIntensity = Math.min(game.stormIntensity, 1.5);
   game.volumeThisStorm = 0;
   game.moneyThisStorm = 0;
-  game.peakSnowDepth = 0;
   game.stormWarningShown = false;
+
+  // Pick a snow type — weighted by storm intensity and weather power
+  // Higher weather power = chance of harder snow types
+  const maxTypeIdx = Math.min(SNOW_TYPES.length - 1, Math.floor(game.weatherPower * 3) + 1);
+  game.snowType = Math.floor(Math.random() * (maxTypeIdx + 1));
+  // Occasionally force harder types for variety
+  if (game.stormsCompleted > 2 && Math.random() < 0.3) {
+    game.snowType = Math.min(SNOW_TYPES.length - 1, game.snowType + 1);
+  }
+
+  const st = currentSnowType();
   playSound('storm', 0.4);
-  showTooltip('⛈️ Storm rolling in! Get clearing!', 3);
-  // Flash storm warning
+  showTooltip(`⛈️ ${st.icon} ${st.name} storm! ${st.hint}`, 4);
+  // Show snow type display
+  const std = document.getElementById('snowTypeDisplay');
+  std.textContent = `${st.icon} ${st.name} — ${st.desc}`;
+  std.style.color = `rgb(${st.color.r},${st.color.g},${st.color.b})`;
+  std.style.opacity = '1';
+  setTimeout(() => { std.style.opacity = '0'; }, 4000);
+
   const warn = document.getElementById('stormWarning');
   warn.style.opacity = '1';
   setTimeout(() => { warn.style.opacity = '0'; }, 2000);
@@ -546,18 +612,16 @@ function endStorm() {
   game.stormActive = false;
   game.stormTimer = 0;
   game.stormsCompleted++;
-  // Go straight to downtime — no popup
   startDowntime();
 }
 
 function startDowntime() {
   game.state = 'playing';
   game.stormActive = false;
-  // Downtime gets shorter as you get more weather power (storms come faster)
   game.downtimeDuration = Math.max(5, 15 - game.weatherPower * 8);
   game.downtimeTimer = game.downtimeDuration;
   document.getElementById('gameHUD').style.display = 'flex';
-  showTooltip('☀️ Calm weather. Plan & upgrade before the next storm!', 3);
+  showTooltip('☀️ Calm weather. Push remaining snow off the edges! Then plan & upgrade.', 3);
 }
 
 // ═══ SNOW ACCUMULATION (during storms) ═══
@@ -565,33 +629,230 @@ function accumulateSnow(dt) {
   if (!game.stormActive) return;
   const area = currentArea();
   const snow = game.snow;
-  const rate = game.stormIntensity * 0.4; // base snow rate
+  const rate = game.stormIntensity * 0.35;
 
   for (let gy = 0; gy < game.snowGridH; gy++) {
     for (let gx = 0; gx < game.snowGridW; gx++) {
       if (Math.random() < rate * dt * 1.5) {
         const add = (0.01 + Math.random() * 0.015) * game.stormIntensity;
-        snow[gy][gx] = Math.min(area.snowDepthMax, snow[gy][gx] + add);
+        snow[gy][gx].depth = Math.min(area.snowDepthMax, snow[gy][gx].depth + add);
+      }
+    }
+  }
+}
+
+// ═══ SNOW PHYSICS — THE CORE NEW MECHANIC ═══
+// Snow has velocity (vx, vy) per cell. Each frame:
+// 1. Apply player blow force to cells in range
+// 2. Move snow based on velocity (transfer between cells)
+// 3. Snow hitting edges = pushed off = PAID
+// 4. Apply friction to slow snow down
+
+function updateSnowPhysics(dt) {
+  const snow = game.snow;
+  const cs = game.cellSize;
+  const ox = game.offsetX, oy = game.offsetY;
+  const tool = currentTool();
+  const st = currentSnowType();
+  const gw = game.snowGridW, gh = game.snowGridH;
+
+  // 1. PLAYER BLOW FORCE
+  if (game.mouseDown && game.state === 'playing') {
+    const px = game.playerX, py = game.playerY;
+    const blowDx = game.mouseX - px, blowDy = game.mouseY - py;
+    const blowDist = Math.sqrt(blowDx*blowDx + blowDy*blowDy);
+    if (blowDist > 5) {
+      const blowNx = blowDx / blowDist, blowNy = blowDy / blowDist;
+      game.blowAngle = Math.atan2(blowNy, blowNx);
+
+      const reach = tool.reach * game.efficiencyMult * cs;
+      const width = tool.width * game.efficiencyMult * cs;
+      const force = tool.force * game.efficiencyMult * 8.0; // cells/sec^2 base acceleration
+
+      // Adjust force for snow type weight
+      const effectiveForce = force / st.weight;
+
+      let anySnowHit = false;
+
+      for (let gy = 0; gy < gh; gy++) {
+        for (let gx = 0; gx < gw; gx++) {
+          if (snow[gy][gx].depth <= 0.01) continue;
+          const cx = ox + gx*cs + cs/2, cy = oy + gy*cs + cs/2;
+
+          // Vector from player to cell
+          const toCellX = cx - px, toCellY = cy - py;
+          const cellDist = Math.sqrt(toCellX*toCellX + toCellY*toCellY);
+          if (cellDist > reach) continue;
+
+          // Check if cell is within the blow cone
+          // Dot product for forward check, cross for width
+          const dot = (toCellX * blowNx + toCellY * blowNy); // forward distance
+          if (dot < 0) continue; // behind player
+
+          const cross = Math.abs(toCellX * blowNy - toCellY * blowNx); // perpendicular dist
+          // Width falls off with distance
+          const maxWidth = width * (0.3 + 0.7 * (dot / reach));
+          if (cross > maxWidth) continue;
+
+          // Force falls off with distance
+          const distFalloff = 1 - (cellDist / reach) * 0.6;
+          const widthFalloff = 1 - (cross / maxWidth) * 0.5;
+          const totalForce = effectiveForce * distFalloff * widthFalloff;
+
+          // Apply acceleration in blow direction
+          snow[gy][gx].vx += blowNx * totalForce * dt;
+          snow[gy][gx].vy += blowNy * totalForce * dt;
+
+          anySnowHit = true;
+
+          // Visual particles
+          if (Math.random() < 0.04 * tool.force) {
+            emitSnow(cx, cy, game.blowAngle, 1, 30 + tool.force * 8);
+          }
+        }
+      }
+
+      if (anySnowHit && Math.random() < 0.3) playSound('blow', 0.04 + tool.force * 0.01);
+      if (anySnowHit) game.screenShake = Math.min(2, game.screenShake + 0.3 * dt);
+    }
+  }
+
+  // 2. MOVE SNOW (transfer between cells based on velocity)
+  // We use a simple approach: each cell tries to push its snow in the direction of its velocity
+  // Create a transfer buffer to avoid order-dependent issues
+  const transfers = [];
+  let edgeClearTotal = 0;
+
+  for (let gy = 0; gy < gh; gy++) {
+    for (let gx = 0; gx < gw; gx++) {
+      const cell = snow[gy][gx];
+      if (cell.depth <= 0.01) { cell.vx = 0; cell.vy = 0; continue; }
+
+      const speed = Math.sqrt(cell.vx * cell.vx + cell.vy * cell.vy);
+      if (speed < 0.1) continue;
+
+      // How much snow moves this frame
+      const moveAmount = Math.min(cell.depth, speed * dt * 0.5);
+      if (moveAmount < 0.001) continue;
+
+      // Determine target cell(s) based on velocity direction
+      const nx = cell.vx / speed, ny = cell.vy / speed;
+
+      // Target cell offset
+      let tgx = gx + Math.round(nx);
+      let tgy = gy + Math.round(ny);
+
+      // CHECK EDGE EXIT — this is where you get PAID
+      if (tgx < 0 || tgx >= gw || tgy < 0 || tgy >= gh) {
+        // Snow exits the grid! KA-CHING!
+        transfers.push({ fromX:gx, fromY:gy, amount:moveAmount, edge:true,
+          edgeSide: tgx < 0 ? 'left' : tgx >= gw ? 'right' : tgy < 0 ? 'top' : 'bottom',
+          screenX: ox + gx*cs + cs/2, screenY: oy + gy*cs + cs/2 });
+        edgeClearTotal += moveAmount;
+      } else {
+        // Snow pushes into adjacent cell
+        // If target cell is full, snow slows down (compression)
+        const targetDepth = snow[tgy][tgx].depth;
+        const area = currentArea();
+        const headroom = area.snowDepthMax * 1.5 - targetDepth; // allow some overfill
+        const actualMove = Math.min(moveAmount, Math.max(0, headroom));
+
+        if (actualMove > 0.001) {
+          transfers.push({ fromX:gx, fromY:gy, toX:tgx, toY:tgy, amount:actualMove, edge:false,
+            vx: cell.vx * 0.7, vy: cell.vy * 0.7 }); // transfer momentum (reduced)
+        }
+        // Snow hitting a full cell slows down
+        if (headroom < moveAmount * 0.5) {
+          cell.vx *= 0.5;
+          cell.vy *= 0.5;
+        }
       }
     }
   }
 
-  // Track peak depth
-  let maxDepth = 0;
-  for (let gy = 0; gy < game.snowGridH; gy++)
-    for (let gx = 0; gx < game.snowGridW; gx++)
-      if (snow[gy][gx] > maxDepth) maxDepth = snow[gy][gx];
-  game.peakSnowDepth = Math.max(game.peakSnowDepth, maxDepth / area.snowDepthMax);
+  // Apply transfers
+  for (const t of transfers) {
+    snow[t.fromY][t.fromX].depth -= t.amount;
+    if (snow[t.fromY][t.fromX].depth < 0) snow[t.fromY][t.fromX].depth = 0;
+
+    if (t.edge) {
+      // MONEY! Snow pushed off screen
+      const area = currentArea();
+      const st2 = currentSnowType();
+      const basePayment = t.amount * area.payPerUnit * st2.value * 10;
+      const comboPayment = basePayment * game.combo;
+      earnMoney(comboPayment, t.screenX, t.screenY - 15);
+      game.volumeThisStorm += t.amount * 10;
+      game.totalVolumePushed += t.amount * 10;
+
+      // Combo boost
+      game.comboTimer = 0;
+      game.combo = Math.min(10, game.combo + 0.15);
+      game.maxCombo = Math.max(game.maxCombo, game.combo);
+
+      // Edge glow
+      game.edgeGlow[t.edgeSide] = Math.min(1, game.edgeGlow[t.edgeSide] + t.amount * 3);
+
+      // Particles at edge
+      emitEdgeBurst(t.screenX, t.screenY, 3);
+      if (Math.random() < 0.3) playSound('edgeclear', 0.06 + t.amount * 0.1);
+    } else {
+      // Transfer snow to target cell
+      snow[t.toY][t.toX].depth += t.amount;
+      // Transfer some momentum
+      snow[t.toY][t.toX].vx = (snow[t.toY][t.toX].vx * 0.6 + t.vx * 0.4);
+      snow[t.toY][t.toX].vy = (snow[t.toY][t.toX].vy * 0.6 + t.vy * 0.4);
+    }
+  }
+
+  // 3. APPLY FRICTION — snow slows down over time
+  for (let gy = 0; gy < gh; gy++) {
+    for (let gx = 0; gx < gw; gx++) {
+      const cell = snow[gy][gx];
+      const frictionRate = Math.pow(st.friction, dt * 60); // normalize to ~60fps
+      cell.vx *= frictionRate;
+      cell.vy *= frictionRate;
+      // Kill tiny velocities
+      if (Math.abs(cell.vx) < 0.05) cell.vx = 0;
+      if (Math.abs(cell.vy) < 0.05) cell.vy = 0;
+    }
+  }
+
+  // 4. COMBO DECAY
+  game.comboTimer += dt;
+  if (game.comboTimer > game.comboDecay) {
+    game.combo = Math.max(1, game.combo - dt * 0.8);
+  }
+
+  // Update combo display
+  const comboEl = document.getElementById('comboDisplay');
+  if (game.combo > 1.2) {
+    comboEl.textContent = `x${game.combo.toFixed(1)}`;
+    comboEl.style.opacity = '1';
+    comboEl.style.fontSize = `${24 + game.combo * 4}px`;
+    comboEl.style.color = game.combo > 5 ? '#ff6644' : game.combo > 3 ? '#ffcc44' : '#88ccff';
+  } else {
+    comboEl.style.opacity = '0';
+  }
+
+  // Edge glow decay
+  for (const side of ['top','bottom','left','right']) {
+    game.edgeGlow[side] *= 0.92;
+    if (game.edgeGlow[side] < 0.01) game.edgeGlow[side] = 0;
+  }
+
+  // Calculate clearance percentage
+  let totalSnow = 0;
+  for (let gy = 0; gy < gh; gy++)
+    for (let gx = 0; gx < gw; gx++)
+      totalSnow += snow[gy][gx].depth;
+  const maxPossibleSnow = game.totalCells * currentArea().snowDepthMax;
+  game.cleared = maxPossibleSnow > 0 ? 1 - (totalSnow / maxPossibleSnow) : 1;
 }
 
-// ═══ SNOW CLEARING (player action) ═══
-function updateClearing(dt) {
-  const snow = game.snow, cs = game.cellSize;
-  const ox = game.offsetX, oy = game.offsetY;
+// ═══ PLAYER MOVEMENT ═══
+function updatePlayer(dt) {
   const tool = currentTool();
-  const area = currentArea();
-
-  // Player follows mouse
   const spd = 300 * tool.speed * game.efficiencyMult;
   const dx = game.mouseX - game.playerX, dy = game.mouseY - game.playerY;
   const dist = Math.sqrt(dx*dx + dy*dy);
@@ -600,62 +861,13 @@ function updateClearing(dt) {
     game.playerX += (dx/dist) * m;
     game.playerY += (dy/dist) * m;
   }
-
-  // Blow/clear snow when mouse is down
-  if (game.mouseDown) {
-    const radius = (tool.radius * game.efficiencyMult) * cs;
-    const power = tool.power * game.efficiencyMult * 2.0;
-    const px = game.playerX, py = game.playerY;
-    let volumeCleared = 0;
-
-    for (let gy = 0; gy < game.snowGridH; gy++) {
-      for (let gx = 0; gx < game.snowGridW; gx++) {
-        if (snow[gy][gx] <= 0) continue;
-        const cx = ox + gx*cs + cs/2, cy = oy + gy*cs + cs/2;
-        const d = Math.sqrt((cx-px)**2 + (cy-py)**2);
-        if (d < radius) {
-          const falloff = 1 - d/radius;
-          const clearAmt = power * falloff * dt;
-          const before = snow[gy][gx];
-          snow[gy][gx] = Math.max(0, snow[gy][gx] - clearAmt);
-          const cleared = before - snow[gy][gx];
-          if (cleared > 0.001) {
-            volumeCleared += cleared;
-            if (Math.random() < 0.08)
-              emitSnow(cx, cy, Math.atan2(cy-py, cx-px), 2, 40 + power*12);
-          }
-          if (before > 0 && snow[gy][gx] <= 0) {
-            emitSparkle(cx, cy, 3);
-          }
-        }
-      }
-    }
-
-    if (volumeCleared > 0) {
-      // PAY BY VOLUME — the core mechanic
-      const payment = volumeCleared * area.payPerUnit * 10; // scale factor
-      earnMoney(payment, game.playerX, game.playerY - 20);
-      game.volumeThisStorm += volumeCleared * 10;
-      game.totalVolumeCleared += volumeCleared * 10;
-    }
-
-    if (Math.random() < 0.3) playSound('blow', 0.06);
-    if (volumeCleared > 0.1) game.screenShake = Math.min(3, game.screenShake + 0.5);
-  }
-
-  // Calculate clearance percentage
-  let totalSnow = 0;
-  for (let gy = 0; gy < game.snowGridH; gy++)
-    for (let gx = 0; gx < game.snowGridW; gx++)
-      totalSnow += snow[gy][gx];
-  const maxPossibleSnow = game.totalCells * currentArea().snowDepthMax;
-  game.cleared = maxPossibleSnow > 0 ? 1 - (totalSnow / maxPossibleSnow) : 1;
 }
 
 // ═══ DRAW SNOW GRID ═══
 function drawSnowGrid() {
   const snow = game.snow, cs = game.cellSize, ox = game.offsetX, oy = game.offsetY;
   const area = currentArea();
+  const st = currentSnowType();
 
   // Ground
   ctx.fillStyle = '#1a2030';
@@ -663,23 +875,41 @@ function drawSnowGrid() {
   ctx.fillStyle = '#1e2438';
   ctx.beginPath(); ctx.roundRect(ox, oy, game.snowGridW*cs, game.snowGridH*cs, 4); ctx.fill();
 
-  // Snow cells — brightness/opacity scales with depth
+  // Snow cells — color based on snow type, brightness based on depth
   for (let gy = 0; gy < game.snowGridH; gy++) {
     for (let gx = 0; gx < game.snowGridW; gx++) {
-      const s = snow[gy][gx];
-      if (s > 0.01) {
+      const cell = snow[gy][gx];
+      if (cell.depth > 0.01) {
         const x = ox + gx*cs, y = oy + gy*cs;
-        const depth = s / area.snowDepthMax; // 0-1 normalized depth
-        const b = 180 + depth*60, bl = 220 + depth*35;
-        ctx.fillStyle = `rgba(${b},${b+10},${Math.min(255,bl)},${0.3 + depth*0.65})`;
+        const depth = cell.depth / area.snowDepthMax;
+        const r = st.color.r + depth * 30;
+        const g2 = st.color.g + depth * 20;
+        const b = Math.min(255, st.color.b + depth * 15);
+        ctx.fillStyle = `rgba(${r},${g2},${b},${0.3 + depth*0.65})`;
         ctx.fillRect(x, y, cs, cs);
+
         // Snow texture for deep snow
         if (depth > 0.5 && cs > 8) {
           ctx.fillStyle = `rgba(255,255,255,${depth*0.25})`;
           const h = (gx*7+gy*13) % 5;
           ctx.fillRect(x+h, y+(h+2)%cs, 2, 2);
         }
-        // Danger tint for very deep snow
+
+        // Velocity indicator — show movement direction on moving snow
+        const speed = Math.sqrt(cell.vx*cell.vx + cell.vy*cell.vy);
+        if (speed > 0.5 && cs > 6) {
+          const alpha = Math.min(0.6, speed * 0.1);
+          ctx.strokeStyle = `rgba(150,200,255,${alpha})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + cs/2, y + cs/2);
+          const arrowLen = Math.min(cs * 0.8, speed * 2);
+          const nx = cell.vx / speed, ny = cell.vy / speed;
+          ctx.lineTo(x + cs/2 + nx * arrowLen, y + cs/2 + ny * arrowLen);
+          ctx.stroke();
+        }
+
+        // Danger tint for deep snow
         if (depth > 0.8) {
           ctx.fillStyle = `rgba(255,100,100,${(depth-0.8)*0.3})`;
           ctx.fillRect(x, y, cs, cs);
@@ -694,6 +924,37 @@ function drawSnowGrid() {
   // Border
   ctx.strokeStyle = 'rgba(100,180,255,0.15)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(ox-4, oy-4, game.snowGridW*cs+8, game.snowGridH*cs+8, 6); ctx.stroke();
+
+  // Edge glow effects — shows where snow is exiting
+  const gridW = game.snowGridW * cs, gridH = game.snowGridH * cs;
+  // Top edge
+  if (game.edgeGlow.top > 0.01) {
+    const grad = ctx.createLinearGradient(ox, oy, ox, oy + 20);
+    grad.addColorStop(0, `rgba(100,255,180,${game.edgeGlow.top * 0.6})`);
+    grad.addColorStop(1, 'rgba(100,255,180,0)');
+    ctx.fillStyle = grad; ctx.fillRect(ox, oy, gridW, 20);
+  }
+  // Bottom edge
+  if (game.edgeGlow.bottom > 0.01) {
+    const grad = ctx.createLinearGradient(ox, oy+gridH-20, ox, oy+gridH);
+    grad.addColorStop(0, 'rgba(100,255,180,0)');
+    grad.addColorStop(1, `rgba(100,255,180,${game.edgeGlow.bottom * 0.6})`);
+    ctx.fillStyle = grad; ctx.fillRect(ox, oy+gridH-20, gridW, 20);
+  }
+  // Left edge
+  if (game.edgeGlow.left > 0.01) {
+    const grad = ctx.createLinearGradient(ox, oy, ox+20, oy);
+    grad.addColorStop(0, `rgba(100,255,180,${game.edgeGlow.left * 0.6})`);
+    grad.addColorStop(1, 'rgba(100,255,180,0)');
+    ctx.fillStyle = grad; ctx.fillRect(ox, oy, 20, gridH);
+  }
+  // Right edge
+  if (game.edgeGlow.right > 0.01) {
+    const grad = ctx.createLinearGradient(ox+gridW-20, oy, ox+gridW, oy);
+    grad.addColorStop(0, 'rgba(100,255,180,0)');
+    grad.addColorStop(1, `rgba(100,255,180,${game.edgeGlow.right * 0.6})`);
+    ctx.fillStyle = grad; ctx.fillRect(ox+gridW-20, oy, 20, gridH);
+  }
 }
 
 // ═══ DRAW PLAYER ═══
@@ -703,12 +964,44 @@ function drawPlayer() {
   const cs = game.cellSize;
 
   if (game.mouseDown) {
-    const radius = (tool.radius * game.efficiencyMult) * cs;
-    ctx.strokeStyle = 'rgba(100,180,255,0.2)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]);
-    ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
-    const grad = ctx.createRadialGradient(px, py, 0, px, py, radius);
-    grad.addColorStop(0, 'rgba(100,180,255,0.1)'); grad.addColorStop(1, 'rgba(100,180,255,0)');
-    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI*2); ctx.fill();
+    // Draw blow cone visual
+    const reach = tool.reach * game.efficiencyMult * cs;
+    const width = tool.width * game.efficiencyMult * cs;
+    const blowDx = game.mouseX - px, blowDy = game.mouseY - py;
+    const blowDist = Math.sqrt(blowDx*blowDx + blowDy*blowDy);
+    if (blowDist > 5) {
+      const nx = blowDx/blowDist, ny = blowDy/blowDist;
+      const perpX = -ny, perpY = nx;
+
+      // Draw cone
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#88ccff';
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      const endW = width * 1.4;
+      ctx.lineTo(px + nx*reach + perpX*endW, py + ny*reach + perpY*endW);
+      ctx.lineTo(px + nx*reach - perpX*endW, py + ny*reach - perpY*endW);
+      ctx.closePath();
+      ctx.fill();
+
+      // Wind lines inside cone
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = '#aaddff';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const t = performance.now()/1000;
+        const offset = ((t * 2 + i * 0.4) % 1);
+        const lineStart = offset * reach * 0.3;
+        const lineEnd = offset * reach;
+        const lateralOffset = (Math.sin(t * 3 + i * 2) * 0.3) * width;
+        ctx.beginPath();
+        ctx.moveTo(px + nx*lineStart + perpX*lateralOffset, py + ny*lineStart + perpY*lateralOffset);
+        ctx.lineTo(px + nx*lineEnd + perpX*lateralOffset*1.2, py + ny*lineEnd + perpY*lateralOffset*1.2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 
   // Character
@@ -736,7 +1029,6 @@ function updateHUD() {
   document.getElementById('hudPercent').textContent = Math.round(game.cleared * 100) + '%';
   document.getElementById('progressFill').style.width = (game.cleared * 100) + '%';
 
-  // Storm bar
   if (game.stormActive) {
     const pct = (game.stormTimer / game.stormDuration) * 100;
     document.getElementById('stormFill').style.width = pct + '%';
@@ -750,7 +1042,17 @@ function updateHUD() {
     document.getElementById('hudStorm').style.color = '#6090b0';
   }
 
-  document.getElementById('hudVolume').textContent = game.totalVolumeCleared.toFixed(0);
+  // Snow type indicator
+  if (game.stormActive) {
+    const st = currentSnowType();
+    document.getElementById('hudSnowType').textContent = st.icon + ' ' + st.name;
+    document.getElementById('hudSnowType').style.color = `rgb(${st.color.r},${st.color.g},${st.color.b})`;
+  } else {
+    document.getElementById('hudSnowType').textContent = '—';
+    document.getElementById('hudSnowType').style.color = '#6090b0';
+  }
+
+  document.getElementById('hudVolume').textContent = game.totalVolumePushed.toFixed(0);
   document.getElementById('hudRate').textContent = '$' + currentArea().payPerUnit.toFixed(2) + '/unit';
 }
 
@@ -761,12 +1063,11 @@ function showShop() {
   document.getElementById('gameHUD').style.display = 'none';
   document.getElementById('shopMoneyVal').textContent = '$' + game.money.toFixed(2);
 
-  // Build tabs
   const tabBar = document.getElementById('shopTabs');
   tabBar.innerHTML = '';
   const tabs = [
     { id:'tools', label:'🔧 Tools', icon:'🔧' },
-    { id:'weather', label:'🌨️ Weather Manipulation', icon:'🌨️' },
+    { id:'weather', label:'🌨️ Weather', icon:'🌨️' },
     { id:'efficiency', label:'⚡ Efficiency', icon:'⚡' },
     { id:'areas', label:'📍 Clients', icon:'📍' },
   ];
@@ -787,7 +1088,6 @@ function showShop() {
   else if (activeTab === 'efficiency') buildEfficiencyShop(container);
   else if (activeTab === 'areas') buildAreaShop(container);
 
-  // Bottom close button
   const bottomClose = document.createElement('div');
   bottomClose.style.cssText = 'margin-top:16px;margin-bottom:20px;text-align:center';
   bottomClose.innerHTML = '<button class="btn" style="padding:8px 30px" id="btnCloseShop2">← Back to Work</button>';
@@ -798,7 +1098,7 @@ function showShop() {
 function buildToolShop(container) {
   const sec = document.createElement('div');
   sec.className = 'shop-section';
-  sec.innerHTML = '<h3>🔧 Clearing Tools — Your Bread & Butter</h3>';
+  sec.innerHTML = '<h3>🔧 Clearing Tools — Push Snow Harder & Wider</h3>';
   const grid = document.createElement('div');
   grid.className = 'shop-grid';
 
@@ -818,7 +1118,7 @@ function buildToolShop(container) {
 
     item.innerHTML = `<h4>${t.icon} ${t.name}</h4>
       <p>${t.desc}</p>
-      <p style="color:#4a8a6a;font-size:10px">Radius: ${t.radius}x | Power: ${t.power}x | Speed: ${t.speed}x</p>
+      <p style="color:#4a8a6a;font-size:10px">Force: ${t.force}x | Width: ${t.width}x | Reach: ${t.reach}x | Speed: ${t.speed}x</p>
       ${priceHTML}`;
 
     if (owned && !equipped) {
@@ -838,7 +1138,7 @@ function buildToolShop(container) {
 function buildWeatherShop(container) {
   const sec = document.createElement('div');
   sec.className = 'shop-section';
-  sec.innerHTML = '<h3>🌨️ Weather Manipulation — Make It Snow More 😈</h3><p style="font-size:11px;color:#8866cc;margin:-4px 0 10px 4px">More snow = more business. Nobody has to know.</p>';
+  sec.innerHTML = '<h3>🌨️ Weather Manipulation — Make It Snow More 😈</h3><p style="font-size:11px;color:#8866cc;margin:-4px 0 10px 4px">More snow = more to push off = more money. Also unlocks harder snow types!</p>';
   const grid = document.createElement('div');
   grid.className = 'shop-grid';
 
@@ -974,36 +1274,29 @@ function gameLoop(now) {
 
   if (game.state === 'playing') {
     ambientWind(dt);
+    updatePlayer(dt);
 
     if (game.stormActive) {
-      // STORM PHASE: snow falls, you clear, get paid
       game.stormTimer -= dt;
       accumulateSnow(dt);
-      updateClearing(dt);
 
-      // Warning when storm is almost over
       if (game.stormTimer < 5 && !game.stormWarningShown) {
         game.stormWarningShown = true;
-        showTooltip('Storm fading... clear as much as you can!', 3);
+        showTooltip('Storm fading... push as much off the edges as you can!', 3);
       }
 
       if (game.stormTimer <= 0) {
         endStorm();
       }
     } else {
-      // DOWNTIME PHASE: snow slowly melts, plan for next storm
       game.downtimeTimer -= dt;
 
       // Slight snow melting during downtime
       for (let gy = 0; gy < game.snowGridH; gy++)
         for (let gx = 0; gx < game.snowGridW; gx++)
-          if (game.snow[gy][gx] > 0)
-            game.snow[gy][gx] = Math.max(0, game.snow[gy][gx] - 0.005 * dt);
+          if (game.snow[gy][gx].depth > 0)
+            game.snow[gy][gx].depth = Math.max(0, game.snow[gy][gx].depth - 0.003 * dt);
 
-      // Can still clear during downtime (for remaining snow)
-      updateClearing(dt);
-
-      // Storm warning at 3 seconds
       if (game.downtimeTimer <= 3 && game.downtimeTimer > 2.95) {
         const warn = document.getElementById('stormWarning');
         warn.style.opacity = '1';
@@ -1016,13 +1309,15 @@ function gameLoop(now) {
       }
     }
 
+    // Core snow physics runs always during playing state
+    updateSnowPhysics(dt);
+
     drawSnowGrid();
     drawPlayer();
     updateHUD();
     updateMoneyPops(dt);
     drawMoneyPops();
 
-    // Draw storm intensity overlay
     if (game.stormActive) {
       ctx.fillStyle = `rgba(150,170,220,${game.stormIntensity * 0.04})`;
       ctx.fillRect(0, 0, W, H);
@@ -1044,21 +1339,22 @@ function gameLoop(now) {
 document.getElementById('btnStart').onclick = () => {
   initAudio();
   game.state = 'playing';
-  game.money = 0; game.totalEarned = 0; game.totalVolumeCleared = 0; game.stormsCompleted = 0;
+  game.money = 0; game.totalEarned = 0; game.totalVolumePushed = 0; game.stormsCompleted = 0;
   game.ownedTools = [0]; game.currentTool = 0;
   game.ownedWeather = []; game.ownedEfficiency = [];
   game.unlockedAreas = [0];
   game.weatherPower = 0; game.efficiencyMult = 1.0;
+  game.combo = 1; game.comboTimer = 0; game.maxCombo = 1;
   game.moneyPops = [];
+  game.edgeGlow = { top:0, bottom:0, left:0, right:0 };
   particles.length = 0;
   document.getElementById('startScreen').style.display = 'none';
   initArea(0);
-  // Start with first storm after a short delay
   game.downtimeTimer = 5;
   game.downtimeDuration = 5;
   game.stormActive = false;
   document.getElementById('gameHUD').style.display = 'flex';
-  showTooltip('Welcome! Your first storm is coming in 5 seconds. Get ready! 🌨️', 4);
+  showTooltip('Welcome! Push snow OFF THE EDGES to get paid! First storm in 5 seconds. 🌨️', 4);
   playSound('click', 0.3);
 };
 
@@ -1083,7 +1379,6 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (game.state === 'shop') closeShop();
   }
-  // Quick shop access
   if (e.key === 'b' || e.key === 'B') {
     if (game.state === 'playing') { playSound('click', 0.2); showShop(); }
     else if (game.state === 'shop') closeShop();
