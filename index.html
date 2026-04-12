@@ -1939,6 +1939,17 @@ document.getElementById('btnStart').onclick = () => {
   document.getElementById('gameHUD').style.display = 'flex';
   showTooltip('Welcome! Push snow OFF THE EDGES to get paid! First storm in 5 seconds. 🌨️', 4);
   playSound('click', 0.3);
+
+  // Debug mode: ?debug=1 starts with money and Phase 2 unlocked
+  if (new URLSearchParams(window.location.search).get('debug') === '1') {
+    game.money = 5000; game.totalEarned = 5000;
+    game.unlockedAreas = [0, 1, 2];
+    game.ownedTools = [0, 1, 2, 3]; game.currentTool = 3;
+    game.phase2Unlocked = true; game.phase2Announced = true;
+    calcEfficiency();
+    document.getElementById('hudTool').textContent = currentTool().name;
+    showTooltip('🐛 DEBUG MODE: $5000, Phase 2 unlocked, Snow Blower equipped', 5);
+  }
 };
 
 document.getElementById('btnShop').onclick = () => {
