@@ -32,7 +32,7 @@ And here we are — a full snow-clearing business simulator.
 
 ## What Is This?
 
-You start with a leaf blower on Mrs. Henderson's porch. Snow builds up constantly — you're fighting it, earning money with every cleared cell. Take that cash to Business HQ: upgrade your gear, or invest in bigger contracts.
+You start with a leaf blower on Mrs. Henderson's porch. Snow builds up constantly — your job is to keep it clear. The cleaner you keep your turf, the more you earn per second. It's a slow burn: maintain high clearance, watch the money tick up, then invest in upgrades and bigger contracts at Business HQ.
 
 **7 contracts. 4 game modes. Your business, your pace.**
 
@@ -43,12 +43,13 @@ You start with a leaf blower on Mrs. Henderson's porch. Snow builds up constantl
 
 ## How It Works
 
-1. **Clear snow** — click & hold to blow. Earn $ per cell cleared.
-2. **Visit Business HQ** — buy upgrades (Wider Blast, More Power, De-Icer) or unlock new contracts
-3. **Take bigger jobs** — each contract pays more but snow falls harder
-4. **Build your empire** — from solo porch-clearer to regional director
+1. **Clear snow** — click & hold to blow. Keep your area as clear as possible.
+2. **Earn passively** — income ticks up every second based on your clearance %. Higher clearance = more $/sec.
+3. **Visit Business HQ** — buy upgrades (Wider Blast, More Power, De-Icer) or unlock new contracts
+4. **Take bigger jobs** — each contract pays more but snow falls harder
+5. **Build your empire** — from solo porch-clearer to regional director
 
-Snow never stops falling. You decide: upgrade first, or rush the next contract?
+Snow never stops falling. De-Icer slows it down, giving you an edge. You decide: upgrade first, or rush the next contract?
 
 ## Controls
 
@@ -58,12 +59,12 @@ Snow never stops falling. You decide: upgrade first, or rush the next contract?
 
 - Canvas 2D rendering with 60fps particle system (600+ particles)
 - Procedural aurora borealis with multi-wave interference
-- Web Audio API sound engine — blow effects, combos, ambient arctic wind
+- Web Audio API sound engine — blow effects, ambient arctic wind
+- Passive income economy — earn $/sec based on clearance percentage
 - Business progression system with 7 unlockable contracts
-- 6 upgradeable tools with compounding effects
+- 6 upgradeable tools with compounding effects (including De-Icer to slow snowfall)
 - 4 distinct game modes (direct, plow, management, logistics)
-- Floating money pop indicators and $/second rate tracking
-- Screen shake, combo multipliers, sparkle effects
+- Real-time income rate display with current and max $/sec
 - Responsive design — plays on phone or desktop
 
 ## Run Locally
