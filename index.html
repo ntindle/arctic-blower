@@ -671,32 +671,36 @@ function awardXP(w, amount) {
   }
 }
 
-// Auto-create a crew if workers are unassigned
+// Auto-assign uncrewed workers into crews (fill existing first, then create new)
 function autoAssignCrews() {
-  // Find workers without a crew
   const uncrewed = game.workers.filter(w => !w.crewId);
   if (uncrewed.length === 0) return;
 
-  // Group uncrewed workers into crews of up to 4 (3 workers + 1 lead)
-  while (uncrewed.length > 0) {
-    const crew = {
-      id: nextCrewId++,
-      name: 'Crew ' + (game.crews.length + 1),
-      assignedArea: null,
-      equipmentIdx: 0,
-      leaderId: null,
-    };
-    game.crews.push(crew);
-
-    // Fill up to 4 workers
-    const batch = uncrewed.splice(0, 4);
-    for (const w of batch) {
-      w.crewId = crew.id;
+  for (const w of [...uncrewed]) {
+    // Try to fill an existing crew that has room (max 4 per crew)
+    let placed = false;
+    for (const crew of game.crews) {
+      const memberCount = game.workers.filter(wk => wk.crewId === crew.id).length;
+      if (memberCount < 4) {
+        w.crewId = crew.id;
+        if (w.tier === 'lead' && !crew.leaderId) crew.leaderId = w.id;
+        placed = true;
+        break;
+      }
     }
 
-    // If batch has a lead, mark them
-    const lead = batch.find(w => w.tier === 'lead');
-    if (lead) crew.leaderId = lead.id;
+    // No room in existing crews — create a new one
+    if (!placed) {
+      const crew = {
+        id: nextCrewId++,
+        name: 'Crew ' + (game.crews.length + 1),
+        assignedArea: null,
+        equipmentIdx: 0,
+        leaderId: w.tier === 'lead' ? w.id : null,
+      };
+      game.crews.push(crew);
+      w.crewId = crew.id;
+    }
   }
 }
 
