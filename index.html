@@ -451,15 +451,32 @@ function randomWorkerName() {
          LAST_NAMES[Math.floor(Math.random()*LAST_NAMES.length)];
 }
 
+// Worker tiers — everyone starts as rookie and levels up via XP
 const WORKER_TIERS = [
-  { id:'rookie', name:'Rookie Shoveler', skill:0.25, salary:20, hireCost:80, icon:'🧑',
-    desc:'Fresh off the street. Slow but cheap. Everyone starts somewhere.' },
-  { id:'experienced', name:'Experienced Clearer', skill:0.55, salary:45, hireCost:200, icon:'👷',
-    desc:'Knows the difference between powder and slush. Reliable.' },
-  { id:'veteran', name:'Veteran Operator', skill:0.85, salary:80, hireCost:500, icon:'🧑‍✈️',
-    desc:'Can handle any storm. Runs a plow like a surgeon.' },
-  { id:'lead', name:'Crew Lead', skill:0.6, salary:100, hireCost:400, icon:'👔', isLead:true,
-    desc:'Manages up to 3 workers. +20% efficiency to their crew. Less babysitting for you.' },
+  { id:'rookie', name:'Rookie Shoveler', skill:0.4, salary:15, hireCost:60, icon:'🧑',
+    xpRequired:0, desc:'Fresh off the street. Eager but green.' },
+  { id:'experienced', name:'Experienced Clearer', skill:0.65, salary:35, hireCost:0, icon:'👷',
+    xpRequired:80, desc:'Knows powder from slush. Gets the job done.' },
+  { id:'veteran', name:'Veteran Operator', skill:0.9, salary:60, hireCost:0, icon:'🧑‍✈️',
+    xpRequired:250, desc:'Can handle any storm. Runs a plow like a surgeon.' },
+];
+
+// Crew lead is a special promotion (manual, not auto)
+const LEAD_TIER = { id:'lead', name:'Crew Lead', skill:0.7, salary:80, promoteCost:200, icon:'👔', isLead:true,
+  desc:'Manages a crew. +25% efficiency to all crew members.' };
+
+// Crew equipment — purchasable per crew
+const CREW_EQUIPMENT = [
+  { id:'basic_shovels', name:'Basic Shovels', speedMult:1.0, forceMult:1.0, cost:0, icon:'⛏️',
+    desc:'Standard issue. Gets the job done... slowly.' },
+  { id:'snow_pushers', name:'Snow Pushers', speedMult:1.15, forceMult:1.2, cost:150, icon:'🔨',
+    desc:'Wide blade pushers. More snow per pass.' },
+  { id:'power_blowers', name:'Power Blowers', speedMult:1.3, forceMult:1.5, cost:400, icon:'🔧',
+    desc:'Gas-powered blowers. Now we\'re talking.' },
+  { id:'heated_cab_truck', name:'Heated Cab Truck', speedMult:1.5, forceMult:2.0, cost:1000, icon:'🚛',
+    desc:'Enclosed cab, heated seats, plow blade. The crew loves you.' },
+  { id:'commercial_plow', name:'Commercial Plow Rig', speedMult:1.8, forceMult:2.8, cost:2500, icon:'🏗️',
+    desc:'Industrial-grade plow with salt spreader. Absolute unit.' },
 ];
 
 // When the player unlocks Phase 2 (staffing tab)
@@ -467,6 +484,7 @@ const PHASE2_UNLOCK_EARNED = 2000;
 const PHASE2_UNLOCK_TOOL = 3; // Snow blower or above
 
 let nextWorkerId = 1;
+let nextCrewId = 1;
 // ═══ GAME STATE ═══
 const game = {
   state: 'menu',
@@ -536,11 +554,13 @@ const game = {
   // ═══ PHASE 2 STATE ═══
   phase2Unlocked: false,
   phase2Announced: false,
-  workers: [],         // Array of worker objects
-  // Worker object: { id, name, tier, morale, assignedArea, leadId, earnings, stormsWorked }
-  totalPayroll: 0,     // Calculated each cycle
-  payrollHistory: [],   // Last N payroll events
-  workerEarnings: {},   // { areaIdx: amount } — passive income from workers in other areas
+  workers: [],
+  // Worker: { id, name, tier, morale, xp, crewId, earnings, stormsWorked, ... }
+  crews: [],
+  // Crew: { id, name, assignedArea, equipmentIdx, leaderId }
+  totalPayroll: 0,
+  payrollHistory: [],
+  workerEarnings: {},
 
   // Notifications
   notifications: [],
@@ -573,10 +593,111 @@ function calcEfficiency() {
 function calcPayroll() {
   let total = 0;
   for (const w of game.workers) {
-    const tier = WORKER_TIERS.find(t => t.id === w.tier);
+    const tier = getWorkerTier(w);
     if (tier) total += tier.salary;
   }
   game.totalPayroll = total;
+}
+
+// Get tier info for a worker (handles lead special case)
+function getWorkerTier(w) {
+  if (w.tier === 'lead') return LEAD_TIER;
+  return WORKER_TIERS.find(t => t.id === w.tier) || WORKER_TIERS[0];
+}
+
+// Get the crew a worker belongs to
+function getWorkerCrew(w) {
+  return game.crews.find(c => c.id === w.crewId) || null;
+}
+
+// Get crew equipment object
+function getCrewEquipment(crew) {
+  if (!crew) return CREW_EQUIPMENT[0];
+  return CREW_EQUIPMENT[crew.equipmentIdx || 0];
+}
+
+// Calculate effective skill for a worker (tier + crew equipment + lead bonus)
+function getEffectiveSkill(w) {
+  const tier = getWorkerTier(w);
+  let skill = tier.skill;
+
+  const crew = getWorkerCrew(w);
+  if (crew) {
+    const equip = getCrewEquipment(crew);
+    skill *= equip.forceMult;
+
+    // Lead bonus: +25% if crew has a lead
+    const hasLead = game.workers.some(l => l.tier === 'lead' && l.crewId === crew.id);
+    if (hasLead && w.tier !== 'lead') skill *= 1.25;
+  }
+
+  const moraleMult = 0.5 + (w.morale / 100) * 0.5;
+  return skill * moraleMult;
+}
+
+// Calculate effective speed for a worker
+function getEffectiveSpeed(w) {
+  const tier = getWorkerTier(w);
+  let speed = 100 + tier.skill * 80; // Base 100-180 based on skill
+
+  const crew = getWorkerCrew(w);
+  if (crew) {
+    const equip = getCrewEquipment(crew);
+    speed *= equip.speedMult;
+  }
+
+  const moraleMult = 0.6 + (w.morale / 100) * 0.4;
+  return speed * moraleMult;
+}
+
+// Award XP and check for promotion
+function awardXP(w, amount) {
+  if (w.tier === 'lead') return; // Leads don't auto-promote
+  w.xp = (w.xp || 0) + amount;
+
+  // Check promotion thresholds
+  const currentIdx = WORKER_TIERS.findIndex(t => t.id === w.tier);
+  for (let i = WORKER_TIERS.length - 1; i > currentIdx; i--) {
+    if (w.xp >= WORKER_TIERS[i].xpRequired) {
+      const oldTier = getWorkerTier(w);
+      w.tier = WORKER_TIERS[i].id;
+      const newTier = getWorkerTier(w);
+      w.morale = Math.min(100, w.morale + 15); // Promotion morale boost
+      showNotification(`⬆️ ${w.name} promoted to ${newTier.name}! (${oldTier.name} → ${newTier.name})`, 'good', 5);
+      playSound('complete', 0.4);
+      calcPayroll();
+      break;
+    }
+  }
+}
+
+// Auto-create a crew if workers are unassigned
+function autoAssignCrews() {
+  // Find workers without a crew
+  const uncrewed = game.workers.filter(w => !w.crewId);
+  if (uncrewed.length === 0) return;
+
+  // Group uncrewed workers into crews of up to 4 (3 workers + 1 lead)
+  while (uncrewed.length > 0) {
+    const crew = {
+      id: nextCrewId++,
+      name: 'Crew ' + (game.crews.length + 1),
+      assignedArea: null,
+      equipmentIdx: 0,
+      leaderId: null,
+    };
+    game.crews.push(crew);
+
+    // Fill up to 4 workers
+    const batch = uncrewed.splice(0, 4);
+    for (const w of batch) {
+      w.crewId = crew.id;
+    }
+
+    // If batch has a lead, mark them
+    const lead = batch.find(w => w.tier === 'lead');
+    if (lead) crew.leaderId = lead.id;
+  }
 }
 
 function isPhase2Available() {
@@ -730,27 +851,28 @@ function processPayroll() {
   const payroll = game.totalPayroll;
 
   if (game.money >= payroll) {
-    // Can pay everyone
     game.money -= payroll;
     for (const w of game.workers) {
-      w.morale = Math.min(100, w.morale + 5); // Paid workers get happier
+      w.morale = Math.min(100, w.morale + 5);
+      w.stormsWorked = (w.stormsWorked || 0) + 1;
+      // XP gain per storm cycle worked — more XP for harder areas
+      const crew = getWorkerCrew(w);
+      const areaIdx = crew ? crew.assignedArea : null;
+      const xpBase = 8 + (areaIdx || 0) * 3; // 8-23 XP per storm depending on area difficulty
+      awardXP(w, xpBase);
     }
     game.payrollHistory.push({ amount: payroll, paid: true, storm: game.stormsCompleted });
     showNotification(`💰 Payroll: -$${payroll.toFixed(0)} for ${game.workers.length} worker${game.workers.length>1?'s':''}`, 'good', 3);
   } else {
-    // Can't pay! Morale drops, some may quit
     const shortfall = payroll - game.money;
-    game.money = 0; // Spent everything we had
+    game.money = 0;
 
     let quitters = [];
     for (const w of game.workers) {
-      w.morale -= 25 + Math.random() * 15; // Big morale hit
-      if (w.morale <= 0) {
-        quitters.push(w);
-      }
+      w.morale -= 25 + Math.random() * 15;
+      if (w.morale <= 0) quitters.push(w);
     }
 
-    // Remove quitters
     for (const q of quitters) {
       const idx = game.workers.indexOf(q);
       if (idx >= 0) game.workers.splice(idx, 1);
@@ -769,12 +891,9 @@ function processPayroll() {
 
   // Natural morale decay for unhappy workers
   for (const w of game.workers) {
-    if (w.morale < 30) {
-      w.morale -= 3; // Unhappy workers get more unhappy
-    }
+    if (w.morale < 30) w.morale -= 3;
   }
 
-  // Check for more quitters from accumulated low morale
   const lateQuitters = game.workers.filter(w => w.morale <= 0);
   for (const q of lateQuitters) {
     const idx = game.workers.indexOf(q);
@@ -784,38 +903,67 @@ function processPayroll() {
     calcPayroll();
     showNotification(`😤 ${lateQuitters.length} more worker${lateQuitters.length>1?'s':''} walked out! (low morale)`, 'bad', 4);
   }
+
+  // Clean up empty crews
+  game.crews = game.crews.filter(c => game.workers.some(w => w.crewId === c.id));
 }
 
 function processWorkerEarnings() {
-  // Workers assigned to areas generate passive income based on their skill
-  // They simulate clearing snow in areas you're NOT personally in
+  // Simulate push-off-edge earnings for crews in areas the player isn't in.
+  // Each worker simulates pushing X volume off the edge based on their effective
+  // skill, speed, equipment, and storm conditions — matching the core mechanic.
   game.workerEarnings = {};
 
-  for (const w of game.workers) {
-    if (w.assignedArea === null || w.assignedArea === undefined) continue;
-    if (w.assignedArea === game.areaIdx) continue; // Workers in YOUR area help differently (see updateWorkerAI)
+  // Group workers by crew → area
+  for (const crew of game.crews) {
+    if (crew.assignedArea === null || crew.assignedArea === undefined) continue;
+    if (crew.assignedArea === game.areaIdx) continue; // On-screen workers handled by updateWorkerAI
+    const area = AREAS[crew.assignedArea];
+    if (!area || !game.unlockedAreas.includes(crew.assignedArea)) continue;
 
-    const area = AREAS[w.assignedArea];
-    if (!area) continue;
-    if (!game.unlockedAreas.includes(w.assignedArea)) continue;
+    const crewWorkers = game.workers.filter(w => w.crewId === crew.id);
+    if (crewWorkers.length === 0) continue;
 
-    const tier = WORKER_TIERS.find(t => t.id === w.tier);
-    if (!tier) continue;
-
-    // Base earning = area pay × skill × storm intensity × duration factor
+    const equip = getCrewEquipment(crew);
     const stormFactor = game.stormIntensity || 0.5;
-    const skillFactor = tier.skill;
-    // Lead bonus: if this worker has a lead, +20% efficiency
-    const leadBonus = game.workers.some(l =>
-      WORKER_TIERS.find(t => t.id === l.tier)?.isLead && l.assignedArea === w.assignedArea
-    ) ? 1.2 : 1.0;
 
-    const moraleFactor = 0.5 + (w.morale / 100) * 0.5; // 50-100% based on morale
-    const earnings = area.payPerUnit * 15 * skillFactor * stormFactor * leadBonus * moraleFactor;
+    // Simulate: how much snow accumulates in this area during a storm?
+    const totalCells = area.gridW * area.gridH;
+    const snowVolume = totalCells * area.snowDepthMax * stormFactor * 0.6;
 
-    if (!game.workerEarnings[w.assignedArea]) game.workerEarnings[w.assignedArea] = 0;
-    game.workerEarnings[w.assignedArea] += earnings;
-    w.earnings = (w.earnings || 0) + earnings;
+    // Each worker can push a fraction of that volume off the edge
+    let crewVolumeCleared = 0;
+    for (const w of crewWorkers) {
+      const effSkill = getEffectiveSkill(w);
+      const effSpeed = getEffectiveSpeed(w);
+
+      // Simulate: worker clears a path from center to edge repeatedly
+      // A rookie should clear enough to cover their salary on a decent area.
+      // pathsPerStorm scales with speed, volumePerPath scales with skill & area size
+      const pathsPerStorm = (effSpeed / 100) * 12; // ~12 passes for average speed worker
+      const volumePerPath = effSkill * area.snowDepthMax * (area.gridW + area.gridH) / 3;
+      const workerVolume = pathsPerStorm * volumePerPath * stormFactor;
+      crewVolumeCleared += workerVolume;
+
+      // XP bonus for actually clearing (proportional to volume)
+      const bonusXP = Math.min(5, workerVolume * 0.5);
+      awardXP(w, bonusXP);
+    }
+
+    // Can't clear more than what fell
+    crewVolumeCleared = Math.min(crewVolumeCleared, snowVolume * 0.85);
+
+    // Pay is volume × payPerUnit × snow type value (assume avg snow type)
+    const avgSnowValue = 1.2; // Weighted average of snow type values
+    const earnings = crewVolumeCleared * area.payPerUnit * avgSnowValue;
+
+    if (!game.workerEarnings[crew.assignedArea]) game.workerEarnings[crew.assignedArea] = 0;
+    game.workerEarnings[crew.assignedArea] += earnings;
+
+    // Distribute earnings tracking to workers
+    for (const w of crewWorkers) {
+      w.earnings = (w.earnings || 0) + earnings / crewWorkers.length;
+    }
   }
 
   // Add passive earnings to money
@@ -826,6 +974,7 @@ function processWorkerEarnings() {
   if (totalPassive > 0) {
     game.money += totalPassive;
     game.totalEarned += totalPassive;
+    game.totalVolumePushed += totalPassive / 1.5; // Approximate volume
     showNotification(`📋 Crew earnings from other areas: +$${totalPassive.toFixed(0)}`, 'good', 4);
   }
 }
@@ -853,7 +1002,18 @@ function accumulateSnow(dt) {
 // and autonomously push snow toward the nearest edge.
 
 function updateWorkerAI(dt) {
-  const workersHere = game.workers.filter(w => w.assignedArea === game.areaIdx);
+  // Workers in the player's current area are visible and push snow toward edges.
+  // The AI works in phases:
+  //   1. Pick a snow cell to start from (prefer deep snow near center)
+  //   2. Walk to it
+  //   3. PUSH it in a lane toward the nearest edge (keep walking until at edge)
+  //   4. Once at edge or snow is gone, pick a new target
+
+  // Find workers in this area via their crew assignment
+  const workersHere = game.workers.filter(w => {
+    const crew = getWorkerCrew(w);
+    return crew && crew.assignedArea === game.areaIdx;
+  });
   if (workersHere.length === 0) return;
 
   const snow = game.snow;
@@ -864,105 +1024,156 @@ function updateWorkerAI(dt) {
   const st = currentSnowType();
 
   for (const w of workersHere) {
-    const tier = WORKER_TIERS.find(t => t.id === w.tier);
+    const tier = getWorkerTier(w);
     if (!tier) continue;
 
     // Initialize worker position if needed
     if (w.wx === undefined) {
       w.wx = ox + (0.2 + Math.random() * 0.6) * gw * cs;
       w.wy = oy + (0.2 + Math.random() * 0.6) * gh * cs;
+      w.aiState = 'seeking'; // 'seeking' | 'pushing' | 'returning'
       w.targetGx = -1;
       w.targetGy = -1;
+      w.pushDirX = 0;
+      w.pushDirY = 0;
       w.aiTimer = 0;
     }
 
-    w.aiTimer -= dt;
+    const effSkill = getEffectiveSkill(w);
+    const effSpeed = getEffectiveSpeed(w);
 
-    // Lead bonus for workers in same area
-    const hasLead = game.workers.some(l =>
-      WORKER_TIERS.find(t => t.id === l.tier)?.isLead && l.assignedArea === w.assignedArea && l.id !== w.id
-    );
-    const leadMult = hasLead ? 1.2 : 1.0;
-    const moraleMult = 0.5 + (w.morale / 100) * 0.5;
-    const skillMult = tier.skill * leadMult * moraleMult;
+    const workerGx = Math.floor((w.wx - ox) / cs);
+    const workerGy = Math.floor((w.wy - oy) / cs);
+    const onGrid = workerGx >= 0 && workerGx < gw && workerGy >= 0 && workerGy < gh;
 
-    // Find deepest snow cell to target (retarget every 2-3 seconds)
-    if (w.aiTimer <= 0 || w.targetGx < 0) {
-      w.aiTimer = 2 + Math.random() * 1.5;
-      let bestDepth = 0, bestGx = -1, bestGy = -1;
+    // ── STATE: SEEKING — find deep snow to push ──
+    if (w.aiState === 'seeking') {
+      w.aiTimer -= dt;
+      if (w.aiTimer <= 0 || w.targetGx < 0) {
+        w.aiTimer = 0.5 + Math.random() * 0.5; // Retarget quickly
 
-      // Sample random cells to find deep snow (not exhaustive, for performance)
-      for (let i = 0; i < 20; i++) {
-        const rgx = Math.floor(Math.random() * gw);
-        const rgy = Math.floor(Math.random() * gh);
-        if (snow[rgy][rgx].depth > bestDepth) {
-          bestDepth = snow[rgy][rgx].depth;
-          bestGx = rgx; bestGy = rgy;
-        }
-      }
-      if (bestGx >= 0) {
-        w.targetGx = bestGx;
-        w.targetGy = bestGy;
-      }
-    }
+        // Find deepest snow — prefer cells further from edges (more snow to push)
+        let bestScore = -1, bestGx = -1, bestGy = -1;
+        const samples = 30;
+        for (let i = 0; i < samples; i++) {
+          const rgx = Math.floor(Math.random() * gw);
+          const rgy = Math.floor(Math.random() * gh);
+          const depth = snow[rgy][rgx].depth;
+          if (depth < 0.05) continue;
 
-    // Move toward target
-    if (w.targetGx >= 0) {
-      const targetX = ox + w.targetGx * cs + cs/2;
-      const targetY = oy + w.targetGy * cs + cs/2;
-      const dx = targetX - w.wx, dy = targetY - w.wy;
-      const dist = Math.sqrt(dx*dx + dy*dy);
+          // Score: depth × distance_from_nearest_edge (prefer interior snow)
+          const edgeDist = Math.min(rgx, gw - 1 - rgx, rgy, gh - 1 - rgy);
+          const score = depth * (1 + edgeDist * 0.15);
 
-      if (dist > cs * 0.8) {
-        // Move toward target
-        const speed = 120 * skillMult;
-        const move = Math.min(dist, speed * dt);
-        w.wx += (dx/dist) * move;
-        w.wy += (dy/dist) * move;
-      }
-
-      // Push snow — simplified blow around the worker position
-      const workerGx = Math.floor((w.wx - ox) / cs);
-      const workerGy = Math.floor((w.wy - oy) / cs);
-
-      if (workerGx >= 0 && workerGx < gw && workerGy >= 0 && workerGy < gh) {
-        // Determine push direction — toward nearest edge
-        const distLeft = workerGx;
-        const distRight = gw - 1 - workerGx;
-        const distTop = workerGy;
-        const distBottom = gh - 1 - workerGy;
-        const minDist = Math.min(distLeft, distRight, distTop, distBottom);
-
-        let pushNx = 0, pushNy = 0;
-        if (minDist === distLeft) pushNx = -1;
-        else if (minDist === distRight) pushNx = 1;
-        else if (minDist === distTop) pushNy = -1;
-        else pushNy = 1;
-
-        // Apply force to nearby cells
-        const pushForce = 2.0 * skillMult / st.weight;
-        const pushRange = 2;
-
-        for (let dy2 = -pushRange; dy2 <= pushRange; dy2++) {
-          for (let dx2 = -pushRange; dx2 <= pushRange; dx2++) {
-            const cgx = workerGx + dx2, cgy = workerGy + dy2;
-            if (cgx < 0 || cgx >= gw || cgy < 0 || cgy >= gh) continue;
-            const cell = snow[cgy][cgx];
-            if (cell.depth < 0.02) continue;
-
-            const cdist = Math.sqrt(dx2*dx2 + dy2*dy2);
-            if (cdist > pushRange) continue;
-            const falloff = 1 - cdist / (pushRange + 0.5);
-
-            cell.vx += pushNx * pushForce * falloff * dt;
-            cell.vy += pushNy * pushForce * falloff * dt;
+          if (score > bestScore) {
+            bestScore = score; bestGx = rgx; bestGy = rgy;
           }
         }
 
-        // Small particle effect
-        if (Math.random() < 0.05 * skillMult) {
-          const angle = Math.atan2(pushNy, pushNx);
-          emitSnow(w.wx, w.wy, angle, 1, 15);
+        if (bestGx >= 0) {
+          w.targetGx = bestGx;
+          w.targetGy = bestGy;
+
+          // Pre-calculate push direction — toward the NEAREST edge from the target
+          const distLeft = bestGx;
+          const distRight = gw - 1 - bestGx;
+          const distTop = bestGy;
+          const distBottom = gh - 1 - bestGy;
+          const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+          w.pushDirX = 0; w.pushDirY = 0;
+          if (minDist === distLeft) w.pushDirX = -1;
+          else if (minDist === distRight) w.pushDirX = 1;
+          else if (minDist === distTop) w.pushDirY = -1;
+          else w.pushDirY = 1;
+        } else {
+          // No snow found, idle briefly
+          w.aiTimer = 1.5;
+        }
+      }
+
+      // Move toward target snow
+      if (w.targetGx >= 0) {
+        const targetX = ox + w.targetGx * cs + cs / 2;
+        const targetY = oy + w.targetGy * cs + cs / 2;
+        const dx = targetX - w.wx, dy = targetY - w.wy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > cs * 0.6) {
+          const move = Math.min(dist, effSpeed * dt);
+          w.wx += (dx / dist) * move;
+          w.wy += (dy / dist) * move;
+        } else {
+          // Arrived at snow — start pushing
+          w.aiState = 'pushing';
+        }
+      }
+    }
+
+    // ── STATE: PUSHING — walk toward edge while pushing snow ahead ──
+    else if (w.aiState === 'pushing') {
+      // Move in push direction
+      const moveSpeed = effSpeed * 0.7; // Slower while pushing
+      w.wx += w.pushDirX * moveSpeed * dt;
+      w.wy += w.pushDirY * moveSpeed * dt;
+
+      // Check if we've reached the edge (or gone past)
+      const newGx = Math.floor((w.wx - ox) / cs);
+      const newGy = Math.floor((w.wy - oy) / cs);
+      const atEdge = newGx < 0 || newGx >= gw || newGy < 0 || newGy >= gh;
+
+      if (atEdge) {
+        // Clamp position to just inside grid and go back to seeking
+        w.wx = Math.max(ox + cs * 0.5, Math.min(ox + (gw - 0.5) * cs, w.wx));
+        w.wy = Math.max(oy + cs * 0.5, Math.min(oy + (gh - 0.5) * cs, w.wy));
+        w.aiState = 'seeking';
+        w.targetGx = -1;
+        w.aiTimer = 0.3;
+      } else {
+        // Apply push force to snow cells in front of and around the worker
+        const pushForce = 3.0 * effSkill / st.weight;
+        const pushRange = Math.max(2, Math.floor(effSkill * 3));
+
+        // Push in a wider swath — 3 cells wide perpendicular to push direction
+        const perpX = w.pushDirY !== 0 ? 1 : 0;
+        const perpY = w.pushDirX !== 0 ? 1 : 0;
+
+        for (let ahead = 0; ahead <= pushRange; ahead++) {
+          for (let side = -1; side <= 1; side++) {
+            const cgx = newGx + w.pushDirX * ahead + perpX * side;
+            const cgy = newGy + w.pushDirY * ahead + perpY * side;
+            if (cgx < 0 || cgx >= gw || cgy < 0 || cgy >= gh) continue;
+
+            const cell = snow[cgy][cgx];
+            if (cell.depth < 0.01) continue;
+
+            const falloff = 1 - ahead / (pushRange + 1);
+            const sideFalloff = side === 0 ? 1.0 : 0.5;
+            const force = pushForce * falloff * sideFalloff;
+
+            cell.vx += w.pushDirX * force * dt;
+            cell.vy += w.pushDirY * force * dt;
+          }
+        }
+
+        // Check if there's still snow ahead — if not, go find more
+        let snowAhead = false;
+        for (let ahead = 0; ahead <= 3; ahead++) {
+          const cgx = newGx + w.pushDirX * ahead;
+          const cgy = newGy + w.pushDirY * ahead;
+          if (cgx < 0 || cgx >= gw || cgy < 0 || cgy >= gh) break;
+          if (snow[cgy][cgx].depth > 0.03) { snowAhead = true; break; }
+        }
+        if (!snowAhead) {
+          w.aiState = 'seeking';
+          w.targetGx = -1;
+          w.aiTimer = 0.2;
+        }
+
+        // Particle effect while pushing
+        if (Math.random() < 0.08 * effSkill) {
+          const angle = Math.atan2(w.pushDirY, w.pushDirX);
+          emitSnow(w.wx, w.wy, angle, 1, 20);
         }
       }
     }
@@ -970,10 +1181,13 @@ function updateWorkerAI(dt) {
 }
 
 function drawWorkers() {
-  const workersHere = game.workers.filter(w => w.assignedArea === game.areaIdx);
+  const workersHere = game.workers.filter(w => {
+    const crew = getWorkerCrew(w);
+    return crew && crew.assignedArea === game.areaIdx;
+  });
   for (const w of workersHere) {
     if (w.wx === undefined) continue;
-    const tier = WORKER_TIERS.find(t => t.id === w.tier);
+    const tier = getWorkerTier(w);
     if (!tier) continue;
 
     // Worker body
@@ -1009,22 +1223,25 @@ function updateCrewHUD() {
   document.getElementById('hudPayroll').style.display = 'flex';
   document.getElementById('hudPayrollVal').textContent = '$' + game.totalPayroll.toFixed(0) + '/cycle';
 
-  // Color code payroll warning
   const payrollEl = document.getElementById('hudPayrollVal');
   if (game.money < game.totalPayroll * 2) {
-    payrollEl.style.color = '#ff6644'; // Danger — less than 2 cycles of pay
+    payrollEl.style.color = '#ff6644';
   } else if (game.money < game.totalPayroll * 5) {
-    payrollEl.style.color = '#ffcc88'; // Warning
+    payrollEl.style.color = '#ffcc88';
   } else {
-    payrollEl.style.color = '#88ffbb'; // Safe
+    payrollEl.style.color = '#88ffbb';
   }
 
   const mini = document.getElementById('crewMini');
-  const workersHere = game.workers.filter(w => w.assignedArea === game.areaIdx).length;
+  const crewsHere = game.crews.filter(c => c.assignedArea === game.areaIdx);
+  const workersHere = game.workers.filter(w => {
+    const crew = getWorkerCrew(w);
+    return crew && crew.assignedArea === game.areaIdx;
+  }).length;
   const workersElsewhere = game.workers.length - workersHere;
 
-  mini.innerHTML = `<span class="crew-dot">👥 ${game.workers.length} staff</span>` +
-    (workersHere > 0 ? `<span class="crew-dot" style="color:#88ccff">🔧 ${workersHere} here</span>` : '') +
+  mini.innerHTML = `<span class="crew-dot">👥 ${game.workers.length} staff in ${game.crews.length} crew${game.crews.length!==1?'s':''}</span>` +
+    (crewsHere.length > 0 ? `<span class="crew-dot" style="color:#88ccff">🔧 ${crewsHere.length} crew${crewsHere.length!==1?'s':''} here (${workersHere})</span>` : '') +
     (workersElsewhere > 0 ? `<span class="crew-dot" style="color:#88ffbb">📋 ${workersElsewhere} on other jobs</span>` : '');
 }
 // ═══ SNOW PHYSICS — THE CORE MECHANIC ═══
@@ -1411,7 +1628,7 @@ function drawPlayer() {
   ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(tool.icon, px, py - 18);
   // "YOU" label to distinguish from workers
-  if (game.workers.some(w => w.assignedArea === game.areaIdx)) {
+  if (game.crews.some(c => c.assignedArea === game.areaIdx)) {
     ctx.font = 'bold 9px sans-serif';
     ctx.fillStyle = '#ff6644';
     ctx.fillText('YOU', px, py - 28);
@@ -1606,7 +1823,8 @@ function buildAreaShop(container) {
     const canAfford = game.money >= a.unlockCost;
     const isNext = i === Math.max(...game.unlockedAreas) + 1;
     const available = !unlocked && isNext;
-    const workersHere = game.workers.filter(w => w.assignedArea === i).length;
+    const crewsHere = game.crews.filter(c => c.assignedArea === i);
+    const workersHere = game.workers.filter(w => { const c = getWorkerCrew(w); return c && c.assignedArea === i; }).length;
 
     const item = document.createElement('div');
     item.className = 'shop-item panel' + (current ? ' owned' : (!unlocked && !available ? ' locked' : ''));
@@ -1616,7 +1834,7 @@ function buildAreaShop(container) {
     else if (available) priceHTML = `<div class="price gold">${canAfford ? '' : '🔒 '}$${a.unlockCost}</div>`;
     else priceHTML = '<div class="price" style="color:#405060">🔒 Get previous contract first</div>';
 
-    const workerInfo = workersHere > 0 ? `<p style="color:#88ccff;font-size:10px">👥 ${workersHere} worker${workersHere>1?'s':''} assigned</p>` : '';
+    const workerInfo = crewsHere.length > 0 ? `<p style="color:#88ccff;font-size:10px">👥 ${crewsHere.length} crew${crewsHere.length>1?'s':''} (${workersHere} workers) assigned</p>` : '';
 
     item.innerHTML = `<h4>📍 ${a.name}</h4>
       <p>${a.desc}</p>
@@ -1645,13 +1863,12 @@ function buildStaffingShop(container) {
   if (game.workers.length > 0) {
     calcPayroll();
     const banner = document.createElement('div');
-    const canPay = game.money >= game.totalPayroll;
     const cyclesAffordable = game.totalPayroll > 0 ? Math.floor(game.money / game.totalPayroll) : 999;
     const bannerClass = cyclesAffordable >= 5 ? 'payroll-ok' : cyclesAffordable >= 2 ? 'payroll-warning' : 'payroll-danger';
     banner.className = 'payroll-banner ' + bannerClass;
     banner.innerHTML = `<div>
         <span style="font-size:14px;font-weight:600">💰 Payroll: $${game.totalPayroll}/storm cycle</span><br>
-        <span style="font-size:10px;opacity:0.7">${game.workers.length} employee${game.workers.length>1?'s':''} • Can cover ${cyclesAffordable} more cycle${cyclesAffordable!==1?'s':''}</span>
+        <span style="font-size:10px;opacity:0.7">${game.workers.length} employee${game.workers.length>1?'s':''} in ${game.crews.length} crew${game.crews.length!==1?'s':''} • ${cyclesAffordable} cycle${cyclesAffordable!==1?'s':''} covered</span>
       </div>
       <div style="text-align:right">
         <span style="font-size:11px">${cyclesAffordable >= 5 ? '✅ Healthy' : cyclesAffordable >= 2 ? '⚠️ Watch it' : '🚨 DANGER'}</span>
@@ -1659,144 +1876,258 @@ function buildStaffingShop(container) {
     container.appendChild(banner);
   }
 
-  // Hire section
+  // ── HIRE SECTION ──
   const hireSec = document.createElement('div');
   hireSec.className = 'shop-section';
   hireSec.innerHTML = game.workers.length === 0
-    ? '<h3>👥 Hire Your First Employee</h3><p style="font-size:11px;color:#8866cc;margin:-4px 0 10px 4px">Time to grow! Hire workers to clear snow in areas you can\'t get to. They earn money for you — but you have to pay their salary every storm cycle. If you can\'t pay, they quit. 😬</p>'
-    : '<h3>👥 Hire More Staff</h3><p style="font-size:11px;color:#607890;margin:-4px 0 10px 4px">Each worker costs a hiring fee + ongoing salary per storm cycle.</p>';
+    ? '<h3>👥 Hire Your First Employee</h3><p style="font-size:11px;color:#8866cc;margin:-4px 0 10px 4px">Everyone starts as a Rookie and levels up through experience. They auto-group into crews you assign to areas. 📈</p>'
+    : '<h3>👥 Hire Rookies</h3><p style="font-size:11px;color:#607890;margin:-4px 0 10px 4px">New hires start as Rookies. They gain XP each storm and auto-promote to Experienced → Veteran.</p>';
 
   const hireGrid = document.createElement('div');
   hireGrid.className = 'shop-grid';
 
-  for (const tier of WORKER_TIERS) {
-    // Leads require at least 2 non-lead workers
-    if (tier.isLead && game.workers.filter(w => !WORKER_TIERS.find(t => t.id === w.tier)?.isLead).length < 2) continue;
-
-    const canAfford = game.money >= tier.hireCost;
-    const item = document.createElement('div');
-    item.className = 'shop-item panel' + (!canAfford ? ' locked' : '');
-
-    item.innerHTML = `<h4>${tier.icon} ${tier.name}</h4>
-      <p>${tier.desc}</p>
-      <p style="color:#4a6a8a;font-size:10px">Skill: ${Math.round(tier.skill*100)}% | Salary: $${tier.salary}/cycle</p>
-      <div class="price gold">${canAfford ? '' : '🔒 '}$${tier.hireCost} to hire</div>`;
-
-    if (canAfford) {
-      item.onclick = () => {
-        game.money -= tier.hireCost;
-        const worker = {
-          id: nextWorkerId++,
-          name: randomWorkerName(),
-          tier: tier.id,
-          morale: 75 + Math.random() * 25, // Start with decent morale
-          assignedArea: null,
-          earnings: 0,
-          stormsWorked: 0,
-        };
-        game.workers.push(worker);
-        calcPayroll();
-        playSound('hire', 0.4);
-        showTooltip(`🎉 ${worker.name} hired as ${tier.name}!`, 3);
-        showShop();
+  // Only hire rookies — they level up from there
+  const rookieTier = WORKER_TIERS[0];
+  const canAfford = game.money >= rookieTier.hireCost;
+  const hireItem = document.createElement('div');
+  hireItem.className = 'shop-item panel' + (!canAfford ? ' locked' : '');
+  hireItem.innerHTML = `<h4>${rookieTier.icon} Hire ${rookieTier.name}</h4>
+    <p>${rookieTier.desc}</p>
+    <p style="color:#4a6a8a;font-size:10px">Skill: ${Math.round(rookieTier.skill*100)}% | Salary: $${rookieTier.salary}/cycle</p>
+    <p style="color:#8866cc;font-size:9px">Levels up at ${WORKER_TIERS[1].xpRequired} XP → ${WORKER_TIERS[1].name}, ${WORKER_TIERS[2].xpRequired} XP → ${WORKER_TIERS[2].name}</p>
+    <div class="price gold">${canAfford ? '' : '🔒 '}$${rookieTier.hireCost} to hire</div>`;
+  if (canAfford) {
+    hireItem.onclick = () => {
+      game.money -= rookieTier.hireCost;
+      const worker = {
+        id: nextWorkerId++,
+        name: randomWorkerName(),
+        tier: 'rookie',
+        morale: 75 + Math.random() * 25,
+        xp: 0,
+        crewId: null,
+        earnings: 0,
+        stormsWorked: 0,
       };
-    }
-    hireGrid.appendChild(item);
+      game.workers.push(worker);
+      autoAssignCrews();
+      calcPayroll();
+      playSound('hire', 0.4);
+      showTooltip(`🎉 ${worker.name} hired and assigned to ${getWorkerCrew(worker)?.name || 'a new crew'}!`, 3);
+      showShop();
+    };
   }
+  hireGrid.appendChild(hireItem);
   hireSec.appendChild(hireGrid);
   container.appendChild(hireSec);
 
-  // Current workers section
-  if (game.workers.length > 0) {
+  // ── CREWS SECTION ──
+  if (game.crews.length > 0) {
     const crewSec = document.createElement('div');
     crewSec.className = 'shop-section';
-    crewSec.innerHTML = '<h3>📋 Your Team</h3>';
+    crewSec.innerHTML = '<h3>🏗️ Your Crews</h3><p style="font-size:11px;color:#607890;margin:-4px 0 10px 4px">Assign crews to areas and upgrade their equipment. Better gear = more snow pushed = more money.</p>';
 
-    const crewGrid = document.createElement('div');
-    crewGrid.className = 'shop-grid';
+    for (const crew of game.crews) {
+      const crewMembers = game.workers.filter(w => w.crewId === crew.id);
+      if (crewMembers.length === 0) continue;
 
-    for (const w of game.workers) {
-      const tier = WORKER_TIERS.find(t => t.id === w.tier);
-      if (!tier) continue;
-
-      const card = document.createElement('div');
-      card.className = 'worker-card panel';
-
-      const moralePct = w.morale / 100;
-      const moraleColor = moralePct > 0.6 ? '#44cc66' : moralePct > 0.3 ? '#cccc44' : '#cc4444';
-      const moraleLabel = moralePct > 0.8 ? 'Happy' : moralePct > 0.6 ? 'Content' : moralePct > 0.3 ? 'Unhappy' : 'Furious';
-
-      const assignedName = w.assignedArea !== null && w.assignedArea !== undefined
-        ? AREAS[w.assignedArea]?.name || 'Unknown'
+      const equip = getCrewEquipment(crew);
+      const hasLead = crewMembers.some(w => w.tier === 'lead');
+      const assignedName = crew.assignedArea !== null && crew.assignedArea !== undefined
+        ? AREAS[crew.assignedArea]?.name || 'Unknown'
         : 'Unassigned';
-      const assignedColor = w.assignedArea !== null ? '#88ccff' : '#ff8866';
+      const assignedColor = crew.assignedArea !== null ? '#88ccff' : '#ff8866';
 
-      card.innerHTML = `
-        <div class="worker-header">
+      // Calculate crew earning power
+      let crewSkillAvg = 0;
+      for (const w of crewMembers) crewSkillAvg += getEffectiveSkill(w);
+      crewSkillAvg /= crewMembers.length;
+
+      const crewCard = document.createElement('div');
+      crewCard.className = 'panel';
+      crewCard.style.cssText = 'margin-bottom:12px;padding:14px';
+
+      let membersHTML = '';
+      for (const w of crewMembers) {
+        const tier = getWorkerTier(w);
+        const moralePct = w.morale / 100;
+        const moraleColor = moralePct > 0.6 ? '#44cc66' : moralePct > 0.3 ? '#cccc44' : '#cc4444';
+        const xpPct = w.tier === 'lead' ? 100 : (() => {
+          const curIdx = WORKER_TIERS.findIndex(t => t.id === w.tier);
+          const nextTier = WORKER_TIERS[curIdx + 1];
+          if (!nextTier) return 100;
+          const curReq = WORKER_TIERS[curIdx].xpRequired;
+          return Math.min(100, ((w.xp || 0) - curReq) / (nextTier.xpRequired - curReq) * 100);
+        })();
+        const xpColor = xpPct > 80 ? '#ffcc44' : '#4488cc';
+
+        membersHTML += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <span style="font-size:14px">${tier.icon}</span>
+          <div style="flex:1">
+            <div style="font-size:11px;color:#aaddff;font-weight:600">${w.name} <span style="font-size:9px;color:#8866cc">${tier.name}</span></div>
+            <div style="display:flex;gap:8px;font-size:9px;color:#607890">
+              <span>XP: ${w.xp||0}${w.tier!=='lead'&&w.tier!=='veteran'?' ('+Math.round(xpPct)+'% → next)':''}</span>
+              <span>💪 ${Math.round(w.morale)}%</span>
+              <span style="color:#66ddaa">$${(w.earnings||0).toFixed(0)} earned</span>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:2px">
+              <div style="flex:1;height:3px;background:rgba(255,255,255,0.1);border-radius:2px"><div style="height:100%;width:${xpPct}%;background:${xpColor};border-radius:2px"></div></div>
+              <div style="flex:0.5;height:3px;background:rgba(255,255,255,0.1);border-radius:2px"><div style="height:100%;width:${w.morale}%;background:${moraleColor};border-radius:2px"></div></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:3px" id="workerBtns_${w.id}"></div>
+        </div>`;
+      }
+
+      crewCard.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <div>
-            <div class="worker-name">${tier.icon} ${w.name}</div>
-            <div class="worker-role">${tier.name}</div>
+            <span style="font-size:14px;font-weight:700;color:#aaddff">${crew.name}</span>
+            ${hasLead ? '<span style="font-size:9px;color:#ffcc88;margin-left:6px">👔 +25% bonus</span>' : ''}
           </div>
-          <div style="text-align:right;font-size:10px;color:#607890">
-            $${tier.salary}/cycle<br>
-            <span style="color:#66ddaa">Earned: $${(w.earnings||0).toFixed(0)}</span>
+          <div style="text-align:right;font-size:10px">
+            <span style="color:${assignedColor}">📍 ${assignedName}</span><br>
+            <span style="color:#607890">${equip.icon} ${equip.name}</span>
           </div>
         </div>
-        <div class="worker-stats">
-          📍 <span style="color:${assignedColor}">${assignedName}</span> • 
-          💪 ${moraleLabel} (${Math.round(w.morale)}%)
-        </div>
-        <div class="morale-bar"><div class="morale-fill" style="width:${w.morale}%;background:${moraleColor}"></div></div>
-        <div class="worker-actions" id="workerActions_${w.id}"></div>`;
+        <div style="margin-bottom:8px">${membersHTML}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center" id="crewActions_${crew.id}"></div>`;
 
-      crewGrid.appendChild(card);
+      crewSec.appendChild(crewCard);
 
-      // Add action buttons after DOM insertion
+      // Add crew action buttons after DOM insertion
       setTimeout(() => {
-        const actionsDiv = document.getElementById(`workerActions_${w.id}`);
+        const actionsDiv = document.getElementById(`crewActions_${crew.id}`);
         if (!actionsDiv) return;
 
-        // Assign to area dropdown
+        // Area assignment buttons
+        const areaLabel = document.createElement('span');
+        areaLabel.style.cssText = 'font-size:9px;color:#607890;margin-right:4px';
+        areaLabel.textContent = 'Assign:';
+        actionsDiv.appendChild(areaLabel);
+
         for (let i = 0; i < AREAS.length; i++) {
           if (!game.unlockedAreas.includes(i)) continue;
           const a = AREAS[i];
-          const isAssigned = w.assignedArea === i;
+          const isAssigned = crew.assignedArea === i;
           const btn = document.createElement('button');
           btn.className = 'btn' + (isAssigned ? ' btn-primary' : '');
           btn.textContent = isAssigned ? `📍 ${a.name.split(' ')[0]}` : a.name.split(' ')[0];
           btn.style.cssText = 'padding:3px 8px;font-size:9px;pointer-events:auto';
           btn.onclick = () => {
-            w.assignedArea = isAssigned ? null : i;
-            // Reset worker position when reassigned
-            w.wx = undefined; w.wy = undefined; w.targetGx = -1;
+            crew.assignedArea = isAssigned ? null : i;
+            // Reset all crew worker positions
+            for (const w of crewMembers) { w.wx = undefined; w.wy = undefined; w.aiState = 'seeking'; w.targetGx = -1; }
             playSound('click', 0.2);
             showShop();
           };
           actionsDiv.appendChild(btn);
         }
 
-        // Fire button
-        const fireBtn = document.createElement('button');
-        fireBtn.className = 'btn btn-danger';
-        fireBtn.textContent = '🚫 Fire';
-        fireBtn.style.cssText = 'padding:3px 8px;font-size:9px;pointer-events:auto;margin-left:auto';
-        fireBtn.onclick = () => {
-          const idx = game.workers.indexOf(w);
-          if (idx >= 0) game.workers.splice(idx, 1);
-          calcPayroll();
-          playSound('fired', 0.3);
-          showTooltip(`${w.name} has been let go.`, 2);
-          showShop();
-        };
-        actionsDiv.appendChild(fireBtn);
+        // Worker action buttons (promote to lead, fire)
+        for (const w of crewMembers) {
+          setTimeout(() => {
+            const wBtns = document.getElementById(`workerBtns_${w.id}`);
+            if (!wBtns) return;
+
+            // Promote to lead button (if veteran and no lead in crew)
+            if (w.tier === 'veteran' && !hasLead) {
+              const promBtn = document.createElement('button');
+              promBtn.className = 'btn btn-gold';
+              promBtn.textContent = '👔';
+              promBtn.title = `Promote to Crew Lead ($${LEAD_TIER.promoteCost})`;
+              promBtn.style.cssText = 'padding:2px 6px;font-size:10px;pointer-events:auto';
+              if (game.money >= LEAD_TIER.promoteCost) {
+                promBtn.onclick = () => {
+                  game.money -= LEAD_TIER.promoteCost;
+                  w.tier = 'lead';
+                  crew.leaderId = w.id;
+                  calcPayroll();
+                  playSound('complete', 0.4);
+                  showNotification(`👔 ${w.name} promoted to Crew Lead!`, 'good', 4);
+                  showShop();
+                };
+              } else {
+                promBtn.classList.add('btn-disabled');
+              }
+              wBtns.appendChild(promBtn);
+            }
+
+            // Fire button
+            const fireBtn = document.createElement('button');
+            fireBtn.className = 'btn btn-danger';
+            fireBtn.textContent = '✕';
+            fireBtn.title = 'Fire this worker';
+            fireBtn.style.cssText = 'padding:2px 6px;font-size:10px;pointer-events:auto';
+            fireBtn.onclick = () => {
+              const idx = game.workers.indexOf(w);
+              if (idx >= 0) game.workers.splice(idx, 1);
+              if (crew.leaderId === w.id) crew.leaderId = null;
+              // Remove empty crews
+              game.crews = game.crews.filter(c => game.workers.some(wk => wk.crewId === c.id));
+              calcPayroll();
+              playSound('fired', 0.3);
+              showTooltip(`${w.name} has been let go.`, 2);
+              showShop();
+            };
+            wBtns.appendChild(fireBtn);
+          }, 0);
+        }
       }, 0);
     }
 
-    crewSec.appendChild(crewGrid);
     container.appendChild(crewSec);
+
+    // ── EQUIPMENT UPGRADES ──
+    const equipSec = document.createElement('div');
+    equipSec.className = 'shop-section';
+    equipSec.innerHTML = '<h3>🚛 Crew Equipment — Upgrade Your Fleet</h3><p style="font-size:11px;color:#607890;margin:-4px 0 10px 4px">Better equipment = faster clearing + more force. Upgrades apply per crew.</p>';
+
+    const equipGrid = document.createElement('div');
+    equipGrid.className = 'shop-grid';
+
+    for (const crew of game.crews) {
+      const currentEquipIdx = crew.equipmentIdx || 0;
+      const nextEquipIdx = currentEquipIdx + 1;
+      if (nextEquipIdx >= CREW_EQUIPMENT.length) continue;
+
+      const nextEquip = CREW_EQUIPMENT[nextEquipIdx];
+      const currentEquip = CREW_EQUIPMENT[currentEquipIdx];
+      const canAffordEquip = game.money >= nextEquip.cost;
+
+      const eItem = document.createElement('div');
+      eItem.className = 'shop-item panel' + (!canAffordEquip ? ' locked' : '');
+      eItem.innerHTML = `<h4>${nextEquip.icon} ${nextEquip.name}</h4>
+        <p>${nextEquip.desc}</p>
+        <p style="color:#4a6a8a;font-size:10px">Speed: ×${nextEquip.speedMult} | Force: ×${nextEquip.forceMult}</p>
+        <p style="color:#8866cc;font-size:9px">For: ${crew.name} (currently ${currentEquip.icon} ${currentEquip.name})</p>
+        <div class="price gold">${canAffordEquip ? '' : '🔒 '}$${nextEquip.cost}</div>`;
+
+      if (canAffordEquip) {
+        eItem.onclick = () => {
+          game.money -= nextEquip.cost;
+          crew.equipmentIdx = nextEquipIdx;
+          playSound('upgrade', 0.4);
+          showTooltip(`🚛 ${crew.name} upgraded to ${nextEquip.name}!`, 3);
+          showShop();
+        };
+      }
+      equipGrid.appendChild(eItem);
+    }
+
+    if (equipGrid.children.length === 0) {
+      const maxedMsg = document.createElement('div');
+      maxedMsg.className = 'panel';
+      maxedMsg.style.cssText = 'text-align:center;padding:12px;color:#607890;font-size:11px';
+      maxedMsg.textContent = 'All crews at max equipment! 💪';
+      equipGrid.appendChild(maxedMsg);
+    }
+
+    equipSec.appendChild(equipGrid);
+    container.appendChild(equipSec);
   }
 
-  // Phase 2 tips
+  // Phase 2 tips (shown when no workers)
   if (game.workers.length === 0) {
     const tipSec = document.createElement('div');
     tipSec.className = 'shop-section';
@@ -1804,9 +2135,11 @@ function buildStaffingShop(container) {
     tipSec.innerHTML = `<div class="panel" style="max-width:500px;margin:0 auto">
       <h4 style="color:#ffcc88;margin-bottom:8px">💡 Growing Your Business</h4>
       <p style="font-size:11px;color:#607890;line-height:1.7">
-        Hire workers and assign them to client areas. They'll clear snow and earn money for you — even in areas you're not personally working.<br><br>
-        ⚠️ <span style="color:#ffcc88">But be careful:</span> You pay their salary every storm cycle. Hire too many too fast and you won't make payroll. They'll quit. And you'll be back to shoveling alone.<br><br>
-        🎯 <span style="color:#88ccff">Strategy:</span> Start with 1-2 rookies in your best-paying area. Build up savings, then expand.
+        Hire rookies — they auto-group into crews. Assign a crew to an area and they start clearing snow for you.<br><br>
+        📈 <span style="color:#88ccff">Progression:</span> Workers gain XP each storm cycle and auto-promote: Rookie → Experienced → Veteran. Veterans can be promoted to Crew Lead (+25% bonus to the whole crew).<br><br>
+        🚛 <span style="color:#88ccff">Equipment:</span> Upgrade crew gear from shovels → pushers → blowers → trucks → industrial plows.<br><br>
+        ⚠️ <span style="color:#ffcc88">But be careful:</span> You pay salary every storm. Hire too fast and you can't make payroll — they quit.<br><br>
+        🎯 <span style="color:#88ccff">Strategy:</span> Start with 2-3 rookies in your best-paying unlocked area. Let them level up, upgrade their gear, expand from there.
       </p>
     </div>`;
     container.appendChild(tipSec);
@@ -1927,9 +2260,9 @@ document.getElementById('btnStart').onclick = () => {
   game.edgeGlow = { top:0, bottom:0, left:0, right:0 };
   // Phase 2 reset
   game.phase2Unlocked = false; game.phase2Announced = false;
-  game.workers = []; game.totalPayroll = 0;
+  game.workers = []; game.crews = []; game.totalPayroll = 0;
   game.payrollHistory = []; game.workerEarnings = {};
-  nextWorkerId = 1;
+  nextWorkerId = 1; nextCrewId = 1;
   particles.length = 0;
   document.getElementById('startScreen').style.display = 'none';
   initArea(0);
